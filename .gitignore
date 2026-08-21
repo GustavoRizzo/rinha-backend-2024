@@ -1,0 +1,54 @@
+# ---- repositório oficial da Rinha (clone público, read-only) ----
+rinha-de-backend-2024-q1/
+
+# ---- resultados de teste de carga ----
+# Relatórios HTML do Gatling são pesados. Versionamos apenas os metadados,
+# que é o que alimenta `just compare`.
+resultados/**/*
+!resultados/**/metadata.json
+!resultados/.gitkeep
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+.Python
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ---- Django ----
+*.sqlite3
+*.sqlite3-journal
+db.sqlite3
+/staticfiles/
+/media/
+local_settings.py
+
+# ---- segredos / ambiente ----
+.env
+.env.*
+!.env.example
+
+# ---- Gatling (se instalado dentro do projeto) ----
+gatling/
+*.jfr
+
+# ---- editores / SO ----
+.idea/
+.vscode/*
+!.vscode/settings.json
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# ---- Claude Code ----
+.claude/settings.local.json
