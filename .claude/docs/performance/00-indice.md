@@ -6,9 +6,10 @@ Cada experimento tem arquivo próprio. A convenção de escrita está descrita e
 | # | Experimento | Data | Estado |
 | - | - | - | - |
 | [01](./01-debug-vs-producao.md) | Custo do `DEBUG=True` e de `runserver` vs. Gunicorn (SQLite) | 2026-08-21 | **concluído** |
-| 02 | Latência sob taxa fixa (modelo aberto) | — | planejado |
-| 03 | `POST /transacoes` — exige Postgres | — | planejado |
-| 04 | Servidores alternativos (Granian, uWSGI, gthread) sob cota de CPU | — | planejado |
+| [02](./02-container-e-cgroup.md) | Container + cgroup (SQLite): workers sob cota, throttling | 2026-08-21 | **parcial** |
+| 03 | Adição do Postgres | — | planejado |
+| 04 | Adição do nginx e da 2ª instância | — | planejado |
+| 05 | Servidores/workers alternativos (gthread, Granian, uWSGI) | — | planejado |
 
 ## Regras de ouro destes documentos
 

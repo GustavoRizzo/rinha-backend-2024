@@ -235,6 +235,22 @@ bench-01:
     bash {{RAIZ}}/scripts/bench-memoria.sh gunicorn-1w-debug extrato 30
     just bench-tabela
 
+# uma série da API em container sob cota de cgroup
+[group('bench')]
+bench-cont cpus="0.45" workers="1" rede="bridge" duracao="10s" reps="5" rps="":
+    @bash {{RAIZ}}/scripts/bench-container.sh {{cpus}} {{workers}} {{rede}} {{duracao}} {{reps}} {{rps}}
+
+# reproduz o experimento 02: workers sob cota, saturação e taxa fixa
+[group('bench')]
+bench-02:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for w in 1 2 4; do
+        bash {{RAIZ}}/scripts/bench-container.sh 0.45 "$w" bridge 10s 5
+        bash {{RAIZ}}/scripts/bench-container.sh 0.45 "$w" bridge 10s 3 170
+    done
+    just bench-tabela
+
 # imprime a tabela comparativa das séries já executadas
 [group('bench')]
 bench-tabela:

@@ -21,8 +21,11 @@ ENV PATH="/venv/bin:$PATH" \
 WORKDIR /app
 COPY . .
 
-# Usuário sem privilégios; o diretório precisa ser gravável por causa do SQLite.
-RUN useradd --uid 10001 --no-create-home rinha && chown -R rinha:rinha /app
+# Usuário sem privilégios; /app precisa ser gravável por causa do SQLite.
+# O HOME precisa existir: o gunicorn 26 cria ali o socket do control server e,
+# sem o diretório, loga `Permission denied` a cada boot.
+RUN useradd --uid 10001 --create-home --home-dir /home/rinha rinha \
+ && chown -R rinha:rinha /app /home/rinha
 USER rinha
 
 EXPOSE 8080

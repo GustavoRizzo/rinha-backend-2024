@@ -67,6 +67,17 @@ for i in $(seq 1 "$reps"); do
     # ATENÇÃO: `summary.total` do oha é a DURAÇÃO em segundos, não a contagem.
     # A contagem sai da soma da distribuição de status.
     total=$(printf '%s' "$saida" | python3 -c 'import json,sys;print(sum(json.load(sys.stdin)["statusCodeDistribution"].values()))')
+    # Erros de conexão envenenam a medição sem zerá-la: o worker sync do gunicorn
+    # fecha toda conexão (sync.py:177, `resp.force_close()`), então cada request
+    # é um TCP novo. Em vazão alta o host esgota portas efêmeras e a série vira
+    # lixo silenciosamente. Ver performance/02-container-e-cgroup.md.
+    erros=$(printf '%s' "$saida" | python3 -c 'import json,sys;print(sum(json.load(sys.stdin).get("errorDistribution",{}).get(k,0) for k in ["connection error"]))')
+    if [[ "$erros" -gt $((total / 100 + 1)) ]]; then
+        echo "ABORTADO: $erros erros de conexão para $total respostas." >&2
+        echo "  Portas efêmeras esgotadas (ss -tan state time-wait | wc -l)." >&2
+        echo "  Espere o TIME_WAIT drenar (~60s) ou reduza a vazão." >&2
+        exit 1
+    fi
     if [[ "$total" -eq 0 ]]; then
         echo "ABORTADO: zero requisições atendidas — a API não ficou acessível." >&2
         echo "  (em Docker Desktop, network_mode:host não alcança o localhost do WSL)" >&2
@@ -87,6 +98,8 @@ for i in $(seq 1 "$reps"); do
         "$destino" "$config" extrato "$duracao" "$modelo" "$CONCORRENCIA" "$extra" >/dev/null
     amostras+=("$destino")
     echo "[$config] rep $i/$reps" >&2
+    # Dá tempo ao TIME_WAIT do host de drenar antes da próxima repetição.
+    [[ "$i" -lt "$reps" ]] && sleep "${BENCH_PAUSA:-5}"
 done
 
 python3 "$RAIZ/scripts/bench-agregar.py" \
