@@ -47,6 +47,9 @@ if [[ -n "$rps" ]]; then
 fi
 
 config="cpu${cpus}-w${workers}-${rede}"
+# A taxa entra no nome: sem isso, uma série de taxa fixa SOBRESCREVE a de
+# saturação da mesma configuração.
+[[ -n "$rps" ]] && config="${config}-${rps}rps"
 echo "[$config] aquecimento (descartado)..." >&2
 oha -z "$duracao" -c "$CONCORRENCIA" --no-tui --output-format quiet \
     "${taxa[@]}" "http://127.0.0.1:$PORTA/clientes/1/extrato" >/dev/null 2>&1

@@ -45,6 +45,9 @@ def main() -> None:
             "p50_ms": resumo(p50),
             "p99_ms": resumo(p99),
             "codigos": base["resultado"]["statusCodeDistribution"],
+            # Valores crus de cada repetição: a amplitude resume, mas quando
+            # ela sai alta é preciso ver se foi um outlier ou dispersão real.
+            "rps_por_repeticao": [round(v, 1) for v in rps],
             # Só existe sob cgroup: é o que distingue "lento" de "congelado".
             **({"cgroup": {chave: resumo([e["cgroup"][chave] for e in execucoes])
                            for chave in base["cgroup"]}} if "cgroup" in base else {}),
