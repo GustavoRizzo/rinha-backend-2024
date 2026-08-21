@@ -19,12 +19,15 @@ def main() -> None:
 
     def resumo(valores: list[float]) -> dict[str, float]:
         mediana = statistics.median(valores)
+        # A mediana pode ser legitimamente 0 (ex.: nr_throttled sem cota
+        # apertada). Amplitude relativa não existe nesse caso.
+        amplitude = 0.0 if mediana == 0 else (max(valores) - min(valores)) / mediana * 100
         return {
             "mediana": round(mediana, 2),
             "min": round(min(valores), 2),
             "max": round(max(valores), 2),
             # Amplitude relativa: acima disso, diferenças não são atribuíveis.
-            "amplitude_pct": round((max(valores) - min(valores)) / mediana * 100, 2),
+            "amplitude_pct": round(amplitude, 2),
         }
 
     base = execucoes[0]

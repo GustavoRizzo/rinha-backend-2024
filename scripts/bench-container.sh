@@ -64,6 +64,11 @@ for i in $(seq 1 "$reps"); do
     # ATENÇÃO: `summary.total` do oha é a DURAÇÃO em segundos, não a contagem.
     # A contagem sai da soma da distribuição de status.
     total=$(printf '%s' "$saida" | python3 -c 'import json,sys;print(sum(json.load(sys.stdin)["statusCodeDistribution"].values()))')
+    if [[ "$total" -eq 0 ]]; then
+        echo "ABORTADO: zero requisições atendidas — a API não ficou acessível." >&2
+        echo "  (em Docker Desktop, network_mode:host não alcança o localhost do WSL)" >&2
+        exit 1
+    fi
     delta_uso=$(( $(stat_cgroup usage_usec) - antes_uso ))
     extra=$(printf '{"cgroup":{"cpu_usado_s":%s,"cpu_us_por_request":%s,"nr_throttled":%s,"throttled_ms":%s,"nr_periods":%s,"pct_periodos_throttlados":%s}}' \
         "$(echo "scale=3; $delta_uso/1000000" | bc)" \
