@@ -12,6 +12,7 @@ de recursos.
 | [02 — Regras](./02-regras.md) | Contrato HTTP, arquitetura mínima, restrições, pontuação, o que a simulação testa |
 | [03 — Plano de implementação](./03-plano-implementacao.md) | Matriz de variantes, justfile, metodologia de diagnóstico |
 | [04 — Aprendizados](./04-aprendizados.md) | Diário técnico do que descobrimos |
+| [performance/](./performance/00-indice.md) | Um arquivo por experimento de performance |
 | [05 — Hacks da competição](./05-hacks-da-competicao.md) | Atalhos que só se justificam por ser um desafio, não uma aplicação real |
 
 ## Estado atual

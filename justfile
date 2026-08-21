@@ -202,6 +202,45 @@ dj-sync:
     cd {{RAIZ}}/django && uv sync
 
 # ==========================================================================
+# bench — comparativos locais rápidos (SQLite, sem Docker, ferramenta: oha)
+#
+# NÃO confundir com `just load`, que roda o Gatling contra a stack completa.
+# Números destes comandos jamais devem ser comparados com os do Gatling.
+# ==========================================================================
+
+# uma rodada única de uma configuração (use bench-serie para números confiáveis)
+[group('bench')]
+bench-1 config endpoint="extrato" duracao="10s" rps="":
+    @bash {{RAIZ}}/scripts/bench-local.sh {{config}} {{endpoint}} {{duracao}} {{rps}}
+
+# série com aquecimento descartado + N repetições — é o comando que gera os docs
+[group('bench')]
+bench-serie config endpoint="extrato" duracao="10s" reps="3":
+    @bash {{RAIZ}}/scripts/bench-serie.sh {{config}} {{endpoint}} {{duracao}} {{reps}}
+
+# crescimento de RSS sob carga (o que um teste de vazão não enxerga)
+[group('bench')]
+bench-mem config endpoint="extrato" segundos="30":
+    @bash {{RAIZ}}/scripts/bench-memoria.sh {{config}} {{endpoint}} {{segundos}}
+
+# reproduz o experimento 01 inteiro: DEBUG vs. produção, runserver vs. gunicorn
+[group('bench')]
+bench-01:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for c in runserver-debug runserver-prod gunicorn-1w-debug gunicorn-1w gunicorn-4w; do
+        bash {{RAIZ}}/scripts/bench-serie.sh "$c" extrato 10s 3
+    done
+    bash {{RAIZ}}/scripts/bench-memoria.sh gunicorn-1w extrato 30
+    bash {{RAIZ}}/scripts/bench-memoria.sh gunicorn-1w-debug extrato 30
+    just bench-tabela
+
+# imprime a tabela comparativa das séries já executadas
+[group('bench')]
+bench-tabela:
+    @python3 {{RAIZ}}/scripts/bench-tabela.py {{RESULTADOS}}/bench
+
+# ==========================================================================
 # setup — preparação do ambiente
 # ==========================================================================
 

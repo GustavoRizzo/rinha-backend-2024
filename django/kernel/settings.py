@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -19,11 +20,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-r7=#10dos0*%(ws$)_ld2akp!my&mc*lzs8czc5mcb+_wb)g%u'
+# Lida do ambiente para não versionar chave em repositório público.
+# O fallback abaixo é deliberadamente inseguro e serve apenas para
+# desenvolvimento local; qualquer uso real define DJANGO_SECRET_KEY.
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-apenas-para-desenvolvimento-local-nao-usar-em-producao",
+)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Controlado por ambiente para permitir o comparativo DEBUG vs. produção sem
+# editar código. Ver `.claude/docs/performance/01-debug-vs-producao.md`.
+# Com DEBUG=True o Django troca o cursor do banco por `CursorDebugWrapper`, que
+# cronometra e guarda toda query em `connection.queries`. Medido: ~3% de vazão
+# neste endpoint (2 queries por request) — bem menos que a fama sugere.
+# NÃO há vazamento de memória sob WSGI: `reset_queries` está ligado ao sinal
+# `request_started` (django/db/__init__.py:52), então a lista zera a cada
+# request. O vazamento só existe FORA do ciclo de request — management commands,
+# workers, scripts longos.
+DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
 
 # Atrás do load balancer o Host chega como o nome do serviço (api01/api02) ou o
 # IP do container. Validar isso não protege nada aqui e custa uma comparação por

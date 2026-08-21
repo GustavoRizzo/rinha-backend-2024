@@ -45,6 +45,39 @@ Integration. Resultado: Engine 29.6.2, Compose v5.3.1, 20 CPUs / 31GB.
 
 ---
 
+### [2026-08-21] Ferramentas de teste de carga: duas, com papéis diferentes
+**Contexto**: para os comparativos locais (DEBUG vs. produção, `runserver` vs.
+Gunicorn) o Gatling é ferramenta errada — ele existe para a prova final, contra a
+stack completa na porta 9999, com asserções de consistência. Para medir o custo
+de um processo isolado ele é pesado demais para o ciclo de iteração.
+
+**Observado**: nenhum gerador de carga instalado na máquina (`wrk`, `hey`, `ab`,
+`oha`, `k6`, `bombardier`, `vegeta` — todos ausentes). Gatling também.
+
+**Decisão**: **duas ferramentas, papéis separados e nunca comparadas entre si.**
+
+| Ferramenta | Papel | Modelo de carga | Por quê |
+| - | - | - | - |
+| **`oha`** | comparativos locais rápidos (docs em `performance/`) | aberto (`-q`) e fechado | binário único em Rust, sobe instantâneo, saída em JSON, e faz **taxa fixa de verdade** |
+| **Gatling 3.14** | a prova oficial da Rinha, contra a stack completa | aberto (`constantUsersPerSec`) | é o que a competição usa; asserções de consistência no meio da carga |
+
+Não são concorrentes: o Gatling aponta para a porta 9999 e exige LB + 2 APIs +
+banco, com validação de lógica embutida — é o exame final. Subir uma JVM a cada
+iteração de microbenchmark é atrito puro.
+
+**Razão de escolher `oha` e não o óbvio `wrk`**: o `wrk` só faz modelo fechado.
+Como o doc 01 explica, modelo fechado é auto-regulado — um servidor lento
+simplesmente recebe menos carga, e a cauda de latência sai subestimada
+(*coordinated omission*). O regime que mais interessa aqui é "latência sob taxa
+fixa de ~340 req/s", e isso exige modelo aberto.
+
+**Regra derivada** (a mesma da entrada sobre versões do Gatling, generalizada):
+**nunca comparar números produzidos por ferramentas diferentes** — nem por
+versões diferentes da mesma ferramenta. Cada tabela de resultado registra qual
+ferramenta e qual versão a produziu.
+
+---
+
 ### [2026-08-20] Decisão: usar sempre a versão mais recente do Gatling
 **Contexto**: o repo oficial foi testado com Gatling 3.10.3 (mar/2024). A versão
 mais recente é a **3.14** (mai/2025).
