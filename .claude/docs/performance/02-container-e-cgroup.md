@@ -1,6 +1,6 @@
 # 02 — A API em container, sob os limites de cgroup da Rinha
 
-**Data**: 2026-08-21 · **Commit**: ver `resultados/bench/cpu*.serie.json`
+**Data**: 2026-08-21 · **Commit**: `2cda218` (árvore limpa, as 9 séries)
 **Ferramenta**: `oha` 1.15.0 · **Banco**: SQLite · **Docker Desktop / WSL2**
 
 Segundo degrau da escada: mesma aplicação, mesmo SQLite, mesmo endpoint e mesma
