@@ -21,6 +21,8 @@ def cmd(*args: str) -> str:
 
 def main() -> None:
     destino, config, endpoint, duracao, modelo, concorrencia = sys.argv[1:7]
+    # 7º argumento opcional: JSON com campos extras a mesclar (ex.: cgroup).
+    extras = json.loads(sys.argv[7]) if len(sys.argv) > 7 else {}
     bruto = json.load(sys.stdin)
     metadados = {
         "config": config,
@@ -39,7 +41,7 @@ def main() -> None:
         },
         "banco": "sqlite",
         "resultado": bruto,
-    }
+    } | extras
     with open(destino, "w") as saida:
         json.dump(metadados, saida, indent=2)
     print(f"-> {destino}")

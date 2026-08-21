@@ -42,6 +42,9 @@ def main() -> None:
             "p50_ms": resumo(p50),
             "p99_ms": resumo(p99),
             "codigos": base["resultado"]["statusCodeDistribution"],
+            # Só existe sob cgroup: é o que distingue "lento" de "congelado".
+            **({"cgroup": {chave: resumo([e["cgroup"][chave] for e in execucoes])
+                           for chave in base["cgroup"]}} if "cgroup" in base else {}),
         },
         open(destino, "w"),
         indent=2,

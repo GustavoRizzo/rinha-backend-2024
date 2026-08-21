@@ -1,0 +1,28 @@
+# Rig de bancada do experimento 02: UMA API, SQLite, sem nginx e sem Postgres.
+#
+# Não é a stack da Rinha — é o degrau mais baixo dela, isolado de propósito para
+# que a diferença contra o experimento 01 seja atribuível ao container e ao
+# cgroup, e a mais nada.
+services:
+  api01:
+    build:
+      context: .
+    container_name: rinha-bench-api01
+    environment:
+      - DJANGO_DEBUG=0
+      # Semeia o histórico de transações; só faz sentido em benchmark.
+      - BENCH_SEED=1
+      - WEB_CONCURRENCY=${API_WORKERS:-1}
+    ports:
+      - "${API_PORTA:-8090}:8080"
+    deploy:
+      resources:
+        limits:
+          # A Rinha divide 1.5 CPU entre nginx + 2 APIs + banco; 0.45 é a fatia
+          # plausível de uma API. 1.5 serve de teto para enxergar a diferença.
+          cpus: "${API_CPUS:-0.45}"
+          memory: "${API_MEM:-150MB}"
+
+networks:
+  default:
+    name: rinha-bench

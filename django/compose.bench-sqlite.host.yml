@@ -1,0 +1,13 @@
+# Override que troca a rede bridge por host.
+#
+# A bridge do Docker faz NAT em cada pacote. Sem este override, o custo da rede
+# viria embutido junto com o do cgroup — duas variáveis num pacote só.
+services:
+  api01:
+    network_mode: host
+    ports: !reset []
+    environment:
+      - DJANGO_DEBUG=0
+      - BENCH_SEED=1
+      - WEB_CONCURRENCY=${API_WORKERS:-1}
+      - PORTA=${API_PORTA:-8090}
