@@ -69,14 +69,15 @@ for i in $(seq 1 "$reps"); do
         echo "  (em Docker Desktop, network_mode:host não alcança o localhost do WSL)" >&2
         exit 1
     fi
-    delta_uso=$(( $(stat_cgroup usage_usec) - antes_uso ))
-    extra=$(printf '{"cgroup":{"cpu_usado_s":%s,"cpu_us_por_request":%s,"nr_throttled":%s,"throttled_ms":%s,"nr_periods":%s,"pct_periodos_throttlados":%s}}' \
-        "$(echo "scale=3; $delta_uso/1000000" | bc)" \
-        "$(echo "scale=1; $delta_uso/$total" | bc)" \
+    # Uma chamada só, em vez de seis `bc`: as divisões aqui têm denominador
+    # legitimamente zero (sem throttling, nr_periods pode não avançar) e o `bc`
+    # respondia com erro em stderr e string vazia, produzindo JSON quebrado.
+    extra=$(python3 "$RAIZ/scripts/bench-cgroup.py" \
+        "$total" \
+        "$(( $(stat_cgroup usage_usec)   - antes_uso ))" \
         "$(( $(stat_cgroup nr_throttled) - antes_thr ))" \
-        "$(echo "scale=1; ($(stat_cgroup throttled_usec) - $antes_thr_us)/1000" | bc)" \
-        "$(( $(stat_cgroup nr_periods) - antes_per ))" \
-        "$(echo "scale=1; ($(stat_cgroup nr_throttled) - antes_thr)*100/($(stat_cgroup nr_periods) - antes_per)" | bc)")
+        "$(( $(stat_cgroup throttled_usec) - antes_thr_us ))" \
+        "$(( $(stat_cgroup nr_periods)   - antes_per ))")
 
     destino="$RAIZ/resultados/bench/${config}.rep${i}.json"
     printf '%s' "$saida" | python3 "$RAIZ/scripts/bench-metadata.py" \
