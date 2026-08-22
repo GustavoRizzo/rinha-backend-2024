@@ -99,11 +99,39 @@ if os.environ.get("DB_HOST"):
             # do Django) cada requisição abre uma conexão nova: TCP, autenticação
             # e criação de um PROCESSO no servidor Postgres. Com None a conexão
             # persiste pelo tempo de vida do worker.
-            "CONN_MAX_AGE": None if os.environ.get("DB_PERSISTENTE", "1") == "1" else 0,
+            # O pool existe por causa do ASGI: `django/core/handlers/asgi.py` cria
+            # um ThreadSensitiveContext POR REQUISIÇÃO, cada um com seu executor
+            # de uma thread. Como as conexões do Django são thread-local, isso dá
+            # UMA conexão de Postgres por requisição concorrente — e cada conexão
+            # no Postgres é um processo. Com 50 requisições em voo e
+            # max_connections=20, o resultado é `FATAL: sorry, too many clients`.
+            # O pool multiplexa muitas threads sobre poucas conexões.
+            #
+            # Pool e CONN_MAX_AGE são mutuamente exclusivos no Django.
+            "CONN_MAX_AGE": (
+                0
+                if os.environ.get("DB_POOL", "0") == "1"
+                else (None if os.environ.get("DB_PERSISTENTE", "1") == "1" else 0)
+            ),
             # Sem isto, uma conexão persistente derrubada pelo servidor só é
             # descoberta quando a query falha.
             "CONN_HEALTH_CHECKS": True,
-            "OPTIONS": {"connect_timeout": 2},
+            "OPTIONS": {
+                "connect_timeout": 2,
+                **(
+                    {
+                        "pool": {
+                            "min_size": int(os.environ.get("DB_POOL_MIN", "2")),
+                            # Teto deliberadamente baixo: cada conexão é um
+                            # processo no Postgres, e o orçamento é de 550MB
+                            # somando todos os serviços.
+                            "max_size": int(os.environ.get("DB_POOL_MAX", "8")),
+                        }
+                    }
+                    if os.environ.get("DB_POOL", "0") == "1"
+                    else {}
+                ),
+            },
         }
     }
 else:

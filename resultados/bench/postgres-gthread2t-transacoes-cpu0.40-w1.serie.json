@@ -4,7 +4,7 @@
   "duracao": "10s",
   "modelo_de_carga": "fechado(saturacao)",
   "concorrencia": 50,
-  "git_commit": "08eb169",
+  "git_commit": "762808f",
   "git_sujo": true,
   "ferramenta": "oha 1.15.0",
   "host": {
@@ -16,95 +16,95 @@
   "repeticoes": 5,
   "aquecimento_descartado": true,
   "rps": {
-    "mediana": 286.62,
-    "min": 281.47,
-    "max": 292.84,
-    "amplitude_pct": 3.97
+    "mediana": 281.02,
+    "min": 279.66,
+    "max": 283.56,
+    "amplitude_pct": 1.39
   },
   "p50_ms": {
-    "mediana": 191.76,
-    "min": 190.62,
-    "max": 193.77,
-    "amplitude_pct": 1.64
+    "mediana": 192.42,
+    "min": 191.76,
+    "max": 192.81,
+    "amplitude_pct": 0.55
   },
   "p99_ms": {
-    "mediana": 206.35,
-    "min": 204.05,
-    "max": 269.04,
-    "amplitude_pct": 31.49
+    "mediana": 206.08,
+    "min": 204.02,
+    "max": 269.05,
+    "amplitude_pct": 31.56
   },
   "codigos": {
-    "200": 2765
+    "200": 2788
   },
   "rps_por_repeticao": [
-    281.5,
-    286.4,
-    286.6,
-    292.8,
-    287.4
+    283.6,
+    280.7,
+    279.7,
+    283.0,
+    281.0
   ],
   "cgroup": {
     "cpu_usado_s": {
-      "mediana": 4.17,
-      "min": 4.14,
-      "max": 4.18,
-      "amplitude_pct": 1.03
+      "mediana": 4.14,
+      "min": 4.13,
+      "max": 4.15,
+      "amplitude_pct": 0.53
     },
     "cpu_us_por_request": {
-      "mediana": 1479.4,
-      "min": 1453.5,
-      "max": 1497.9,
-      "amplitude_pct": 3.0
+      "mediana": 1500.2,
+      "min": 1486.3,
+      "max": 1506.1,
+      "amplitude_pct": 1.32
     },
     "nr_throttled": {
-      "mediana": 103,
-      "min": 103,
-      "max": 103,
+      "mediana": 102,
+      "min": 102,
+      "max": 102,
       "amplitude_pct": 0.0
     },
     "throttled_ms": {
-      "mediana": 13929.1,
-      "min": 13518.6,
-      "max": 14347.2,
-      "amplitude_pct": 5.95
+      "mediana": 13602.9,
+      "min": 12862.7,
+      "max": 14176.3,
+      "amplitude_pct": 9.66
     },
     "nr_periods": {
-      "mediana": 107,
+      "mediana": 106,
       "min": 106,
-      "max": 109,
-      "amplitude_pct": 2.8
+      "max": 107,
+      "amplitude_pct": 0.94
     },
     "pct_periodos_throttlados": {
-      "mediana": 96.3,
-      "min": 94.5,
-      "max": 97.2,
-      "amplitude_pct": 2.8
+      "mediana": 96.2,
+      "min": 95.3,
+      "max": 96.2,
+      "amplitude_pct": 0.94
     }
   },
   "cgroup_nginx": {
     "cpu_usado_s": {
-      "mediana": 0.35,
+      "mediana": 0.36,
       "min": 0.35,
       "max": 0.36,
-      "amplitude_pct": 3.41
+      "amplitude_pct": 4.17
     },
     "cpu_us_por_request": {
-      "mediana": 125.1,
-      "min": 120.9,
-      "max": 128.2,
-      "amplitude_pct": 5.84
+      "mediana": 129.9,
+      "min": 126.4,
+      "max": 130.6,
+      "amplitude_pct": 3.23
     },
     "nr_throttled": {
       "mediana": 3,
       "min": 3,
-      "max": 4,
-      "amplitude_pct": 33.33
+      "max": 5,
+      "amplitude_pct": 66.67
     },
     "throttled_ms": {
-      "mediana": 109.4,
-      "min": 70.8,
-      "max": 167.7,
-      "amplitude_pct": 88.57
+      "mediana": 67.0,
+      "min": 15.8,
+      "max": 116.2,
+      "amplitude_pct": 149.85
     },
     "nr_periods": {
       "mediana": 106,
@@ -115,8 +115,8 @@
     "pct_periodos_throttlados": {
       "mediana": 2.8,
       "min": 2.8,
-      "max": 3.8,
-      "amplitude_pct": 35.71
+      "max": 4.7,
+      "amplitude_pct": 67.86
     }
   }
 }

@@ -11,6 +11,7 @@
 #
 # BENCH_SERVER=gunicorn-sync|gunicorn-gthread|uvicorn escolhe o servidor HTTP.
 # BENCH_THREADS=N define o tamanho do pool do gthread.
+# BENCH_POOL=1 liga o pool de conexões do psycopg (necessário no ASGI).
 #
 # BENCH_ENDPOINT=transacoes mede a ESCRITA. Fica em variável de ambiente, e
 # não como argumento posicional, para não quebrar os comandos publicados no
@@ -52,6 +53,7 @@ esac
 
 export API_CPUS="$cpus" API_WORKERS="$workers" LB_PORTA="$PORTA"
 export API_SERVER="$SERVIDOR" API_THREADS="$THREADS"
+export DB_POOL="${BENCH_POOL:-0}"
 # stderr preservado: com `2>&1 >/dev/null`, uma falha de subida derrubava o
 # script em silêncio por causa do `set -e`, sem dizer o motivo.
 if ! docker compose "${compose_args[@]}" up -d --build >/dev/null; then
@@ -91,6 +93,7 @@ fi
 sufixo_servidor="$SERVIDOR"
 [[ "$SERVIDOR" == "gunicorn-gthread" ]] && sufixo_servidor="gthread${THREADS}t"
 [[ "$SERVIDOR" == "gunicorn-sync" ]] && sufixo_servidor="sync"
+[[ "${BENCH_POOL:-0}" == "1" ]] && sufixo_servidor="${sufixo_servidor}-pool"
 config="${rig}-${sufixo_servidor}-${ENDPOINT}-cpu${cpus}-w${workers}"
 [[ -n "$rps" ]] && config="${config}-${rps}rps"
 

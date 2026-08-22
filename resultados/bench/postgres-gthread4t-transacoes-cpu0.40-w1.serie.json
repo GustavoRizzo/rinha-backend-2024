@@ -1,10 +1,10 @@
 {
   "config": "postgres-gthread4t-transacoes-cpu0.40-w1",
   "endpoint": "transacoes",
-  "duracao": "5s",
+  "duracao": "10s",
   "modelo_de_carga": "fechado(saturacao)",
   "concorrencia": 50,
-  "git_commit": "08eb169",
+  "git_commit": "762808f",
   "git_sujo": true,
   "ferramenta": "oha 1.15.0",
   "host": {
@@ -13,106 +13,110 @@
     "python": "3.14.6"
   },
   "banco": "postgres",
-  "repeticoes": 1,
+  "repeticoes": 5,
   "aquecimento_descartado": true,
   "rps": {
-    "mediana": 206.11,
-    "min": 206.11,
-    "max": 206.11,
-    "amplitude_pct": 0.0
+    "mediana": 200.77,
+    "min": 196.08,
+    "max": 205.15,
+    "amplitude_pct": 4.52
   },
   "p50_ms": {
-    "mediana": 282.75,
-    "min": 282.75,
-    "max": 282.75,
-    "amplitude_pct": 0.0
+    "mediana": 281.55,
+    "min": 220.55,
+    "max": 284.41,
+    "amplitude_pct": 22.68
   },
   "p99_ms": {
-    "mediana": 295.01,
-    "min": 295.01,
-    "max": 295.01,
-    "amplitude_pct": 0.0
+    "mediana": 301.77,
+    "min": 298.42,
+    "max": 311.37,
+    "amplitude_pct": 4.29
   },
   "codigos": {
-    "200": 981
+    "200": 1911
   },
   "rps_por_repeticao": [
-    206.1
+    196.1,
+    200.0,
+    200.8,
+    205.1,
+    201.3
   ],
   "cgroup": {
     "cpu_usado_s": {
-      "mediana": 2.16,
-      "min": 2.16,
-      "max": 2.16,
-      "amplitude_pct": 0.0
+      "mediana": 4.14,
+      "min": 4.14,
+      "max": 4.16,
+      "amplitude_pct": 0.56
     },
     "cpu_us_por_request": {
-      "mediana": 2201.8,
-      "min": 2201.8,
-      "max": 2201.8,
-      "amplitude_pct": 0.0
+      "mediana": 2113.5,
+      "min": 2068.8,
+      "max": 2170.4,
+      "amplitude_pct": 4.81
     },
     "nr_throttled": {
-      "mediana": 52,
-      "min": 52,
-      "max": 52,
-      "amplitude_pct": 0.0
+      "mediana": 103,
+      "min": 102,
+      "max": 103,
+      "amplitude_pct": 0.97
     },
     "throttled_ms": {
-      "mediana": 12207.8,
-      "min": 12207.8,
-      "max": 12207.8,
-      "amplitude_pct": 0.0
+      "mediana": 25031.3,
+      "min": 23410.6,
+      "max": 25336.4,
+      "amplitude_pct": 7.69
     },
     "nr_periods": {
-      "mediana": 56,
-      "min": 56,
-      "max": 56,
-      "amplitude_pct": 0.0
+      "mediana": 106,
+      "min": 105,
+      "max": 107,
+      "amplitude_pct": 1.89
     },
     "pct_periodos_throttlados": {
-      "mediana": 92.9,
-      "min": 92.9,
-      "max": 92.9,
-      "amplitude_pct": 0.0
+      "mediana": 97.2,
+      "min": 96.3,
+      "max": 97.2,
+      "amplitude_pct": 0.93
     }
   },
   "cgroup_nginx": {
     "cpu_usado_s": {
-      "mediana": 0.2,
-      "min": 0.2,
-      "max": 0.2,
-      "amplitude_pct": 0.0
+      "mediana": 0.32,
+      "min": 0.32,
+      "max": 0.33,
+      "amplitude_pct": 2.19
     },
     "cpu_us_por_request": {
-      "mediana": 200.8,
-      "min": 200.8,
-      "max": 200.8,
-      "amplitude_pct": 0.0
+      "mediana": 164.2,
+      "min": 162.5,
+      "max": 167.1,
+      "amplitude_pct": 2.8
     },
     "nr_throttled": {
       "mediana": 4,
-      "min": 4,
-      "max": 4,
-      "amplitude_pct": 0.0
+      "min": 3,
+      "max": 5,
+      "amplitude_pct": 50.0
     },
     "throttled_ms": {
-      "mediana": 164.4,
-      "min": 164.4,
-      "max": 164.4,
-      "amplitude_pct": 0.0
+      "mediana": 120.6,
+      "min": 63.8,
+      "max": 148.2,
+      "amplitude_pct": 69.98
     },
     "nr_periods": {
-      "mediana": 56,
-      "min": 56,
-      "max": 56,
-      "amplitude_pct": 0.0
+      "mediana": 106,
+      "min": 106,
+      "max": 107,
+      "amplitude_pct": 0.94
     },
     "pct_periodos_throttlados": {
-      "mediana": 7.1,
-      "min": 7.1,
-      "max": 7.1,
-      "amplitude_pct": 0.0
+      "mediana": 3.8,
+      "min": 2.8,
+      "max": 4.7,
+      "amplitude_pct": 50.0
     }
   }
 }

@@ -291,6 +291,32 @@ bench-04:
     done
     just bench-tabela
 
+# uma série variando o servidor HTTP (gunicorn-sync | gunicorn-gthread | uvicorn)
+[group('bench')]
+bench-servidor servidor="gunicorn-sync" threads="4" endpoint="transacoes" cpus="0.40" duracao="10s" reps="5":
+    @BENCH_SERVER={{servidor}} BENCH_THREADS={{threads}} BENCH_ENDPOINT={{endpoint}} \
+        bash {{RAIZ}}/scripts/bench-stack.sh postgres {{cpus}} 1 {{duracao}} {{reps}}
+
+# reproduz o experimento 06: tipos de worker, com e sem cota de CPU
+[group('bench')]
+bench-06:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for e in transacoes extrato; do
+        BENCH_SERVER=gunicorn-sync   BENCH_ENDPOINT=$e bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+        BENCH_SERVER=uvicorn         BENCH_ENDPOINT=$e bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+    done
+    for t in 2 4 8; do
+        BENCH_SERVER=gunicorn-gthread BENCH_THREADS=$t BENCH_ENDPOINT=transacoes \
+            bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+    done
+    # Sem cota: quanto a restrição está custando, e o que a aplicação entrega solta.
+    for s in gunicorn-sync gunicorn-gthread uvicorn; do
+        BENCH_SERVER=$s BENCH_ENDPOINT=transacoes \
+            bash {{RAIZ}}/scripts/bench-stack.sh postgres-sem-limite 0 1 10s 5
+    done
+    just bench-tabela
+
 # imprime a tabela comparativa das séries já executadas
 [group('bench')]
 bench-tabela:
