@@ -1,0 +1,84 @@
+{
+  "config": "cpu1.5-w1-bridge",
+  "endpoint": "extrato",
+  "duracao": "10s",
+  "modelo_de_carga": "fechado(saturacao)",
+  "concorrencia": 50,
+  "git_commit": "2cda218",
+  "git_sujo": false,
+  "ferramenta": "oha 1.15.0",
+  "host": {
+    "cpus": 20,
+    "kernel": "6.6.87.2-microsoft-standard-WSL2",
+    "python": "3.14.6"
+  },
+  "banco": "sqlite",
+  "repeticoes": 5,
+  "aquecimento_descartado": true,
+  "rps": {
+    "mediana": 355.7,
+    "min": 259.93,
+    "max": 820.71,
+    "amplitude_pct": 157.66
+  },
+  "p50_ms": {
+    "mediana": 60.25,
+    "min": 56.94,
+    "max": 60.73,
+    "amplitude_pct": 6.3
+  },
+  "p99_ms": {
+    "mediana": 297.96,
+    "min": 77.32,
+    "max": 353.48,
+    "amplitude_pct": 92.68
+  },
+  "codigos": {
+    "200": 8146
+  },
+  "rps_por_repeticao": [
+    819.4,
+    820.7,
+    355.7,
+    259.9,
+    267.6
+  ],
+  "cgroup": {
+    "cpu_usado_s": {
+      "mediana": 3.4,
+      "min": 1.73,
+      "max": 10.68,
+      "amplitude_pct": 263.62
+    },
+    "cpu_us_por_request": {
+      "mediana": 1308.9,
+      "min": 1272.7,
+      "max": 1340.0,
+      "amplitude_pct": 5.14
+    },
+    "nr_throttled": {
+      "mediana": 0,
+      "min": 0,
+      "max": 0,
+      "amplitude_pct": 0.0
+    },
+    "throttled_ms": {
+      "mediana": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "amplitude_pct": 0.0
+    },
+    "nr_periods": {
+      "mediana": 44,
+      "min": 26,
+      "max": 104,
+      "amplitude_pct": 177.27
+    },
+    "pct_periodos_throttlados": {
+      "mediana": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "amplitude_pct": 0.0
+    }
+  }
+}

@@ -2,11 +2,12 @@
 rinha-de-backend-2024-q1/
 
 # ---- resultados de teste de carga ----
-# Relatórios HTML do Gatling são pesados. Versionamos apenas os metadados,
-# que é o que alimenta `just compare`.
-resultados/**/*
-!resultados/**/metadata.json
-!resultados/.gitkeep
+# Os relatórios HTML do Gatling ficam versionados: são o registro visual de
+# cada execução, e a documentação aponta para eles. ~580KB por execução.
+!resultados/**
+# O simulation.log é binário e pesado (dezenas de MB), e o relatório já foi
+# gerado a partir dele.
+resultados/**/simulation.log
 
 # ---- Python ----
 __pycache__/

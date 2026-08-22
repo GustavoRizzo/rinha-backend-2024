@@ -54,8 +54,17 @@ def main() -> None:
     globais = numeros_da_linha_global(html)
     faixas = faixas_de_resposta(html)
 
-    total = int(float(globais.get("Total Count", globais.get("col2", 0))))
-    ko = int(float(globais.get("Failed Count", globais.get("col4", 0))))
+    def coluna(*rotulos_aceitos: str) -> int:
+        """Os rótulos das colunas mudam entre versões do Gatling; falhar alto é
+        melhor que assumir zero — um total zerado vira multa máxima em silêncio."""
+        for rotulo in rotulos_aceitos:
+            for chave, valor in globais.items():
+                if chave.strip().lower() == rotulo.lower():
+                    return int(float(valor))
+        sys.exit(f"não achei a coluna {rotulos_aceitos} em {sorted(globais)}")
+
+    total = coluna("Total", "Total Count")
+    ko = coluna("KO", "Failed Count")
 
     # A primeira faixa é sempre "t < <lowerBound> ms". Conferimos que o
     # lowerBound configurado é mesmo 250 — senão o número não responde à regra.

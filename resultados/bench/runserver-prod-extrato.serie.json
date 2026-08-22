@@ -1,0 +1,39 @@
+{
+  "config": "runserver-prod",
+  "endpoint": "extrato",
+  "duracao": "10s",
+  "modelo_de_carga": "fechado(saturacao)",
+  "concorrencia": 50,
+  "git_commit": "cbec18a",
+  "git_sujo": false,
+  "ferramenta": "oha 1.15.0",
+  "host": {
+    "cpus": 20,
+    "kernel": "6.6.87.2-microsoft-standard-WSL2",
+    "python": "3.14.6"
+  },
+  "banco": "sqlite",
+  "repeticoes": 3,
+  "aquecimento_descartado": true,
+  "rps": {
+    "mediana": 222.94,
+    "min": 219.77,
+    "max": 222.96,
+    "amplitude_pct": 1.43
+  },
+  "p50_ms": {
+    "mediana": 221.54,
+    "min": 220.97,
+    "max": 222.36,
+    "amplitude_pct": 0.63
+  },
+  "p99_ms": {
+    "mediana": 1368.4,
+    "min": 1364.01,
+    "max": 1372.85,
+    "amplitude_pct": 0.65
+  },
+  "codigos": {
+    "200": 2180
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "requisicoes_total": 61503,
+  "abaixo_de_250ms": 60738,
+  "pct_abaixo_de_250ms": 98.7562,
+  "inconsistencias": 0,
+  "multa_sla_usd": 0.0,
+  "multa_consistencia_usd": 0.0,
+  "pontuacao_usd": 100000.0,
+  "percentis_ms": {
+    "50th pct": "3",
+    "75th pct": "4",
+    "98th pct": "217",
+    "99th pct": "288",
+    "Max": "473"
+  }
+}
