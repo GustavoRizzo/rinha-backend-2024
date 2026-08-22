@@ -24,8 +24,13 @@ COPY . .
 # Usuário sem privilégios; /app precisa ser gravável por causa do SQLite.
 # O HOME precisa existir: o gunicorn 26 cria ali o socket do control server e,
 # sem o diretório, loga `Permission denied` a cada boot.
+# /sockets guarda o socket Unix compartilhado com o nginx. Precisa existir na
+# imagem e pertencer ao usuário: um volume nomeado herda a posse do diretório
+# da imagem na primeira criação — se não existir, o Docker cria como root e o
+# gunicorn não consegue escrever nele.
 RUN useradd --uid 10001 --create-home --home-dir /home/rinha rinha \
- && chown -R rinha:rinha /app /home/rinha
+ && mkdir -p /sockets \
+ && chown -R rinha:rinha /app /home/rinha /sockets
 USER rinha
 
 EXPOSE 8080

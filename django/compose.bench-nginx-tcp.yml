@@ -1,0 +1,16 @@
+# Override que troca o salto nginx->API de socket Unix para TCP.
+#
+# Existe para medir quanto o socket Unix vale. É a única diferença entre as duas
+# configurações — tudo mais é idêntico.
+services:
+  api01:
+    environment:
+      - DJANGO_DEBUG=0
+      - BENCH_SEED=1
+      - WEB_CONCURRENCY=${API_WORKERS:-1}
+      - GUNICORN_BIND=0.0.0.0:8080
+
+  nginx:
+    volumes:
+      - ../infra/nginx/nginx-tcp.conf:/etc/nginx/nginx.conf:ro
+      - sockets:/sockets

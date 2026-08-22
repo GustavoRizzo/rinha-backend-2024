@@ -49,8 +49,9 @@ def main() -> None:
             # ela sai alta é preciso ver se foi um outlier ou dispersão real.
             "rps_por_repeticao": [round(v, 1) for v in rps],
             # Só existe sob cgroup: é o que distingue "lento" de "congelado".
-            **({"cgroup": {chave: resumo([e["cgroup"][chave] for e in execucoes])
-                           for chave in base["cgroup"]}} if "cgroup" in base else {}),
+            **{bloco: {chave: resumo([e[bloco][chave] for e in execucoes])
+                       for chave in base[bloco]}
+               for bloco in ("cgroup", "cgroup_nginx") if bloco in base},
         },
         open(destino, "w"),
         indent=2,

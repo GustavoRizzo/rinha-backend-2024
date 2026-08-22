@@ -17,7 +17,10 @@ fi
 # Falhar aqui é muito melhor que descobrir a divergência no relatório da carga.
 python manage.py verificar_clientes
 
+# GUNICORN_BIND permite `unix:/sockets/api01.sock` no lugar de host:porta.
+# --umask 0 deixa o socket acessível ao nginx, que roda com outro usuário.
 exec gunicorn kernel.wsgi:application \
-    --bind "0.0.0.0:${PORTA:-8080}" \
+    --bind "${GUNICORN_BIND:-0.0.0.0:${PORTA:-8080}}" \
+    --umask 0 \
     --workers "${WEB_CONCURRENCY:-1}" \
     --error-logfile - --log-level warning

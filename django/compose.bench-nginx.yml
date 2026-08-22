@@ -1,0 +1,50 @@
+# Rig do experimento 03: nginx + UMA API, ligados por socket de domínio Unix.
+#
+# Terceiro degrau: mesma aplicação e mesmo SQLite do experimento 02, agora atrás
+# de um load balancer. A API deixa de ser exposta ao gerador de carga — só o
+# nginx publica porta.
+services:
+  api01:
+    build:
+      context: .
+    container_name: rinha-bench-api01
+    environment:
+      - DJANGO_DEBUG=0
+      - BENCH_SEED=1
+      - WEB_CONCURRENCY=${API_WORKERS:-1}
+      # Sem porta TCP: o nginx alcança a API pelo socket no volume compartilhado.
+      - GUNICORN_BIND=unix:/sockets/api01.sock
+    volumes:
+      - sockets:/sockets
+    deploy:
+      resources:
+        limits:
+          cpus: "${API_CPUS:-0.45}"
+          memory: "${API_MEM:-150MB}"
+
+  nginx:
+    image: nginx:1.29-alpine
+    container_name: rinha-bench-nginx
+    depends_on:
+      - api01
+    volumes:
+      - ../infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - sockets:/sockets
+    ports:
+      - "${LB_PORTA:-9999}:9999"
+    deploy:
+      resources:
+        limits:
+          # Fatia enxuta: o nginx é o serviço mais barato da stack e o orçamento
+          # de 1.5 CPU precisa sobrar para API e banco.
+          cpus: "${LB_CPUS:-0.15}"
+          memory: "${LB_MEM:-32MB}"
+
+volumes:
+  # Volume só para o socket. Nomeado (e não bind mount) para herdar a posse do
+  # diretório /sockets da imagem da API.
+  sockets:
+
+networks:
+  default:
+    name: rinha-bench
