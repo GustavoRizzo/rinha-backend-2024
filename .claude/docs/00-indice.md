@@ -17,26 +17,28 @@ de recursos.
 
 ## Estado atual
 
-- [x] Repositório oficial clonado em `rinha-de-backend-2024-q1/` (não modificar)
-- [x] Docker funcionando no WSL (Engine 29.6.2, Compose v5.3.1)
-- [x] Documentação base
-- [x] Decidido: Gatling na versão mais recente (3.14); repositório único (monorepo)
-- [x] `git init` na raiz, `.gitignore`, `README.md`, `justfile`
-- [x] Esqueleto Django (`django/`): uv + Django 6.1 + Python 3.14.6,
-      projeto `kernel`, app `crebitos`
-- [x] Modelo de domínio (`crebitos/models.py`): `Cliente`, `Transacao`,
-      validações e `UPDATE ... RETURNING` atômico — 38 testes passando
-- [x] Hacks isolados em `crebitos/hacks.py` + `.claude/docs/05-hacks-da-competicao.md`
-- [x] Endpoints (`crebitos/views.py`, `kernel/urls.py`): Django puro, sem DRF;
-      `settings.py` enxugado com os cortes comentados à vista
-- [x] Fixture dos 5 clientes + `just dj-setup` / `dj-seed` / `dj-reset` / `dj-verify`
-      — 64 testes passando
-- [ ] Gatling instalado (`just doctor` acusa ausente)
-- [ ] Scripts: `smoke-test.sh`, `rodar-carga.sh`, `check-limites.sh`,
-      `pontuacao.py`, `diagnostico.py`, `comparar.py`
-- [ ] Infra compartilhada: `infra/nginx/`, `infra/sql/`
-- [ ] Dockerfile e compose do projeto Django
-- [ ] Primeira execução de carga
+**Os seis experimentos estão concluídos.** A stack passa na prova oficial com
+pontuação máxima.
+
+- [x] Documentação base (docs 01 a 05) e diário de aprendizados
+- [x] Modelo de domínio, endpoints e 64 testes automatizados
+- [x] Stack completa: nginx + 2 APIs Django/Gunicorn + Postgres, em 1.50 CPU e 550MB
+- [x] Ferramental: `oha` 1.15.0 (comparativos rápidos) e Gatling 3.15.1 (prova oficial)
+- [x] Scripts de ciclo, bancada, pontuação e validação de limites
+- [x] 9 execuções da simulação oficial: **USD 100.000 e zero inconsistências**
+- [x] Seis documentos de experimento em [`performance/`](./performance/00-indice.md)
+
+Resultado da configuração final: **100% das requisições abaixo de 250ms**, p98
+de 7ms contra um SLA de 250ms, subida em ~20s contra um limite de 40s.
+
+### O que ficou em aberto
+
+- Comparar o `UPDATE` atômico contra `SELECT FOR UPDATE` (nunca medido)
+- Variante com as 10 últimas transações em `JSONB` (hack M5, não implementada)
+- `synchronous_commit` como variável medida, não como decisão
+- bridge vs. host no Docker: impossível no Docker Desktop
+- Outras linguagens/frameworks — previsões registradas em
+  [`performance/06`](./performance/06-tipos-de-worker.md), seção 8
 
 ## Referência rápida
 

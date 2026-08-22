@@ -80,6 +80,40 @@ Slug da variante para efeito de resultados: `<projeto>-<override>` →
 > simulação precisa permanecer intacta para os resultados serem comparáveis
 > entre si.
 
+## Estado do plano — o que foi feito e o que não foi
+
+> **Este documento é o plano original, escrito antes da primeira medição.** O
+> caminho real divergiu, e a tabela abaixo reconcilia os dois. Os experimentos
+> executados estão em [`performance/`](./performance/00-indice.md), numerados
+> cronologicamente.
+
+| Bloco | Estado | Onde |
+| - | - | - |
+| **A1** ORM + `select_for_update` | **não feito** — fomos direto ao SQL cru | — |
+| **A2** `UPDATE ... RETURNING` | feito, é a implementação do projeto | `crebitos/models.py` |
+| **A3** Configuração tunada | feito | [04](./performance/04-postgres.md), [05](./performance/05-stack-completa-gatling.md) |
+| **B** Estratégias de concorrência | **não feito** — só B2 existe, nunca comparado | — |
+| **C1/C2** Postgres vs. SQLite | feito | [04](./performance/04-postgres.md) |
+| **C3/C4** MySQL, Mongo | não feito | — |
+| **D** Frameworks e runtimes | **não feito** — só previsões registradas | [06, seção 8](./performance/06-tipos-de-worker.md) |
+| **E** Infraestrutura | feito em parte: nginx, socket Unix, distribuição de cota | [03](./performance/03-nginx-e-socket-unix.md), [05](./performance/05-stack-completa-gatling.md) |
+
+**A maior lacuna é o Bloco B.** A implementação usa o `UPDATE` atômico
+condicional e ele entregou zero inconsistências em 553.527 requisições — mas
+**nunca foi comparado** com `SELECT FOR UPDATE`. A hipótese de que vence "por
+larga margem" continua sendo hipótese.
+
+Duas coisas do plano que a prática mostrou estarem erradas:
+
+- A ordem sugerida na seção 7 previa **instalar o Gatling primeiro** e validar o
+  pipeline com uma API errada de propósito. Na prática o Gatling entrou só no
+  quinto experimento, e o papel de "ver o relatório acusando falhas" acabou
+  sendo cumprido de graça pelo colapso do uvicorn no experimento 06.
+- O plano não previa um **segundo gerador de carga**. O `oha` acabou sendo o
+  instrumento principal, porque a pontuação do Gatling satura e não compara.
+
+---
+
 ## 3. Matriz de variantes
 
 Ordem pensada para maximizar aprendizado, não para maximizar pontuação.
@@ -259,9 +293,9 @@ Toda rodada grava `resultados/<variante>/<timestamp>/metadata.json`:
   "descricao": "UPDATE ... RETURNING, gunicorn 4 workers sync",
   "recursos": { "api01": {"cpus": "0.45", "memory": "100MB"} },
   "host": { "cpus": 20, "memoria_gb": 31, "docker": "29.6.2" },
-  "gatling": "3.14.x",
+  "gatling": "3.15.1",
   "resultado": {
-    "requisicoes_total": 82000,
+    "requisicoes_total": 61503,
     "pct_abaixo_250ms": 99.1,
     "inconsistencias": 0,
     "erros": 0,

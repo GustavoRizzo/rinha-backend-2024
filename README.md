@@ -1,11 +1,25 @@
 # Rinha de Backend 2024/Q1 — laboratório de estudo
 
-Implementações da [Rinha de Backend 2024/Q1](https://github.com/zanfranceschi/rinha-de-backend-2024-q1)
-em diferentes stacks, comparadas sob as mesmas restrições de recursos.
+Implementação da [Rinha de Backend 2024/Q1](https://github.com/zanfranceschi/rinha-de-backend-2024-q1)
+em Django, com **seis experimentos de desempenho** medindo cada decisão de
+arquitetura sob as restrições da competição.
 
 A competição encerrou em março de 2024. **Este repositório não é uma submissão** —
-é um laboratório pessoal para estudar teste de carga, controle de concorrência e
+é um laboratório para estudar teste de carga, controle de concorrência e
 limitação de recursos, usando as regras da Rinha como especificação.
+
+## Resultado
+
+| | |
+| - | - |
+| Pontuação | **USD 100.000** (máxima) em 9 execuções |
+| Requisições abaixo de 250ms | **100%** (SLA exige 98%) |
+| p98 | **7ms** (SLA exige < 250ms) |
+| Inconsistências de saldo | **zero** em mais de 550 mil requisições |
+| Subida da stack | ~20s (limite: 40s) |
+| Recursos | 1.50 CPU e 550MB — o orçamento inteiro |
+
+Relatórios navegáveis do Gatling em [`resultados/django/`](./resultados/django/).
 
 ## O desafio, em uma tela
 
@@ -16,67 +30,159 @@ POST /clientes/{id}/transacoes   -> 200 {limite, saldo} | 422 | 404
 GET  /clientes/{id}/extrato      -> 200 {saldo, ultimas_transacoes} | 404
 ```
 
-Sob as seguintes restrições:
-
 | | |
 | - | - |
 | **Arquitetura** | Load balancer round-robin na porta 9999 + 2 instâncias de API + 1 banco persistente |
 | **Recursos** | 1.5 CPU e 550MB somados entre **todos** os serviços |
-| **Carga** | 4 minutos, pico de ~340 req/s (220 débitos + 110 créditos + 10 extratos) |
-| **SLA** | p98 < 250ms — multa de `(98 - %sucesso) × USD 1.000` |
-| **Consistência** | multa de `USD 803,01` por inconsistência de saldo detectada |
+| **Carga** | 4 minutos, 61.503 requisições, pico de ~340 req/s |
+| **SLA** | 98% abaixo de 250ms — multa de `(98 − %sucesso) × USD 1.000` |
+| **Consistência** | multa de `USD 803,01` por inconsistência de saldo |
 
 Só existem **5 clientes**, o que concentra toda a carga em 5 linhas do banco. A
 dificuldade não é vazão — é manter correção absoluta sob contenção máxima.
 
-## Documentação
+## Arquitetura e as decisões por trás dela
 
-O material de estudo está em [`.claude/docs/`](./.claude/docs/):
+```
+Gatling ──> nginx :9999 ──socket Unix──> api01 (Gunicorn sync, 1 worker) ──┐
+                        └─socket Unix──> api02 (Gunicorn sync, 1 worker) ──┴──> Postgres 18
+   0.10 CPU / 32MB          0.40 CPU / 100MB cada                              0.60 CPU / 318MB
+```
+
+Cada escolha tem um número que a sustenta:
+
+| Decisão | Efeito medido | Experimento |
+| - | - | - |
+| `CONN_MAX_AGE` persistente | **4,75x** de vazão | [04](./.claude/docs/performance/04-postgres.md) |
+| Socket Unix entre nginx e APIs | 2,9x; amplitude de 246% para 3,9% | [03](./.claude/docs/performance/03-nginx-e-socket-unix.md) |
+| Worker `sync` em vez de `gthread` | 2,4x | [06](./.claude/docs/performance/06-tipos-de-worker.md) |
+| Worker `sync` em vez de ASGI/uvicorn | 4,7x | [06](./.claude/docs/performance/06-tipos-de-worker.md) |
+| Cota de CPU nas APIs, não no banco | p98 de 217ms para 7ms | [05](./.claude/docs/performance/05-stack-completa-gatling.md) |
+| 1 worker por API em vez de 4 | 28% sob cota | [04](./.claude/docs/performance/04-postgres.md) |
+| `DEBUG=False` | 4,1% | [01](./.claude/docs/performance/01-debug-vs-producao.md) |
+
+A corretude vem de uma instrução só, que resolve leitura, validação e escrita
+sem janela entre elas:
+
+```sql
+UPDATE crebitos_cliente SET saldo = saldo + %s
+ WHERE id = %s AND saldo + %s >= -limite
+RETURNING saldo, limite;
+```
+
+`READ COMMITTED` — o padrão do Postgres — **não** impede *lost update*. É a
+estratégia que impede.
+
+## Os estudos
+
+Cada experimento tem documento próprio, com ressalvas metodológicas **antes** dos
+números, o commit exato medido e os comandos para replicar.
+
+| # | Experimento | Achado principal |
+| - | - | - |
+| [01](./.claude/docs/performance/01-debug-vs-producao.md) | `DEBUG` e `runserver` vs. Gunicorn | O `runserver` tem escalabilidade **negativa**: 646 rps com 1 conexão, 223 com 50 |
+| [02](./.claude/docs/performance/02-container-e-cgroup.md) | Container e cgroup | Sob cota, 1 worker bate 4 por 37%; e o worker sync esgota as portas efêmeras do host |
+| [03](./.claude/docs/performance/03-nginx-e-socket-unix.md) | nginx e socket Unix | Acrescentar um salto deixou o sistema **mais rápido**: a API parou de fazer trabalho de rede |
+| [04](./.claude/docs/performance/04-postgres.md) | Postgres | O padrão do Django (`CONN_MAX_AGE=0`) custa 4,75x. Sob throttling, esperar I/O é de graça |
+| [05](./.claude/docs/performance/05-stack-completa-gatling.md) | Stack completa + Gatling | A cauda era throttling, e a cota estava no serviço errado |
+| [06](./.claude/docs/performance/06-tipos-de-worker.md) | Tipos de worker | O Gatling **satura**: `sync` e `gthread` tiram a mesma nota com 59% de diferença de vazão |
+
+Material de apoio em [`.claude/docs/`](./.claude/docs/):
 
 | Doc | Conteúdo |
 | - | - |
 | [00 — Índice](./.claude/docs/00-indice.md) | Estado do projeto e referência rápida |
-| [01 — Fundamentos](./.claude/docs/01-fundamentos.md) | Teste de carga, open/closed model, percentis, cgroups, concorrência |
-| [02 — Regras](./.claude/docs/02-regras.md) | Contrato HTTP, restrições, pontuação, o que a simulação testa |
-| [03 — Plano](./.claude/docs/03-plano-implementacao.md) | Matriz de variantes, justfile, metodologia de diagnóstico |
-| [04 — Aprendizados](./.claude/docs/04-aprendizados.md) | Diário técnico e decisões tomadas |
+| [01 — Fundamentos](./.claude/docs/01-fundamentos.md) | Open/closed model, percentis, cgroups, controle de concorrência |
+| [02 — Regras](./.claude/docs/02-regras.md) | Contrato HTTP, restrições, pontuação |
+| [03 — Plano](./.claude/docs/03-plano-implementacao.md) | Matriz de variantes e metodologia de diagnóstico |
+| [04 — Aprendizados](./.claude/docs/04-aprendizados.md) | Diário técnico, decisões e **erros cometidos** |
+| [05 — Hacks da competição](./.claude/docs/05-hacks-da-competicao.md) | Atalhos que só se justificam por ser um desafio |
+
+## Como executar
+
+### Requisitos
+
+```bash
+just doctor       # confere tudo de uma vez
+```
+
+- Docker Engine + Compose v2
+- [`just`](https://github.com/casey/just), [`uv`](https://docs.astral.sh/uv/), JDK 17+
+- [`oha`](https://github.com/hatoo/oha) para os comparativos rápidos: `cargo install oha`
+- O Gatling **não precisa ser instalado**: o projeto Maven em [`gatling/`](./gatling/) traz tudo
+
+### O ciclo completo
+
+```bash
+just check django      # valida 1.5 CPU / 550MB a partir do compose resolvido
+just up django         # sobe a stack e espera prontidão (limite de 40s)
+just smoke django      # 13 verificações do contrato HTTP
+just load django       # a simulação oficial do Gatling (4 minutos)
+just score django/<timestamp>
+just down django
+
+just run django        # tudo acima, em sequência
+```
+
+### Comparativos rápidos com `oha`
+
+O Gatling leva 4 minutos e sua pontuação **satura** — toda configuração razoável
+marca 100.000. Para comparar configurações, o instrumento é o `oha` em
+saturação, que mede **folga** em 10 segundos:
+
+```bash
+just bench-01     # DEBUG vs. produção, runserver vs. Gunicorn
+just bench-02     # workers sob cota de cgroup
+just bench-03     # socket Unix vs. TCP no salto nginx -> API
+just bench-04     # Postgres vs. SQLite, leitura e escrita
+just bench-06     # tipos de worker, com e sem cota
+just bench-tabela # tabela comparativa de tudo que já rodou
+```
+
+Séries individuais:
+
+```bash
+just bench-servidor uvicorn 4 transacoes 0.40 10s 5
+just bench-stack nginx-unix 0.45 1 10s 5
+just bench-mem gunicorn-1w extrato 30      # crescimento de RSS sob carga
+```
+
+Toda execução grava o **hash do commit** junto do resultado, e os scripts
+**abortam com a árvore suja** — um número cuja proveniência é falsa é pior que
+número nenhum.
+
+### Desenvolvimento
+
+```bash
+just dj-setup     # dependências, schema e os 5 clientes
+just dj-test      # 64 testes
+just dj-serve     # servidor de desenvolvimento
+just gen-sql      # regenera infra/sql/ a partir do modelo e da fixture
+```
 
 ## Estrutura
 
 ```
 .
 ├─ .claude/docs/              documentação de estudo
-├─ rinha-de-backend-2024-q1/  repo oficial (gitignored, read-only)
-├─ infra/                     nginx e SQL compartilhados entre projetos
-├─ django/                    implementação Django
-├─ resultados/                metadados das execuções
-├─ scripts/                   smoke test e coleta de métricas
-└─ justfile                   comandos
+│  └─ performance/            um arquivo por experimento
+├─ django/                    a implementação
+│  ├─ crebitos/               modelo, views, testes, hacks isolados
+│  ├─ docker-compose.yml      a stack da competição
+│  └─ compose.bench-*.yml     rigs de bancada
+├─ gatling/                   projeto Maven do teste de carga oficial
+├─ infra/                     nginx, postgresql.conf e SQL de inicialização
+├─ resultados/                relatórios do Gatling e séries do oha
+├─ scripts/                   ciclo, bancada, pontuação, validação
+└─ justfile                   todos os comandos
 ```
 
-Cada pasta de topo é um **projeto** (uma stack). Dentro dele, **variantes** são
-overrides de compose — `django` + `sqlite`, `django` + `raw-sql` — em vez de
-pastas duplicadas.
+## Ressalvas
 
-## Uso
-
-```bash
-just                          # lista os comandos disponíveis
-just run django               # sobe, valida, roda a carga e derruba
-just run django sqlite        # mesma coisa com o override de SQLite
-just compare django-orm django-raw-sql
-```
-
-## Requisitos
-
-- Docker Engine + Compose v2
-- [`just`](https://github.com/casey/just)
-- [`uv`](https://docs.astral.sh/uv/) (projetos Python)
-- JDK 17+ e [Gatling](https://gatling.io/open-source/) (versão mais recente)
-
-## Status
-
-Em construção. Ver [o índice](./.claude/docs/00-indice.md) para o estado atual.
+Os números foram medidos numa máquina local de 20 vCPUs, sobre Docker Desktop e
+WSL2. O ambiente oficial tinha 4 vCPUs, e lá o Gatling disputava CPU com a
+aplicação. **Estes resultados não se comparam com o ranking oficial** — servem
+para comparar variantes entre si.
 
 ## Créditos
 

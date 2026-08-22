@@ -16,7 +16,6 @@ set dotenv-load := true
 RAIZ        := justfile_directory()
 OFICIAL     := RAIZ / "rinha-de-backend-2024-q1"
 RESULTADOS  := RAIZ / "resultados"
-GATLING_HOME := env_var_or_default("GATLING_HOME", home_directory() / "gatling")
 
 # lista os comandos disponíveis
 default:
@@ -342,11 +341,15 @@ doctor:
     echo "docker engine:"
     docker info --format '  ✓ engine {{{{.ServerVersion}} — {{{{.NCPU}} CPUs' 2>/dev/null || { echo "  ✗ engine inacessível"; ok=1; }
     echo "gatling:"
-    if [[ -x "{{GATLING_HOME}}/bin/gatling.sh" ]]; then
-        echo "  ✓ {{GATLING_HOME}}"
+    # A partir da 3.13 o bundle virou um projeto Maven: não há mais
+    # bin/gatling.sh. O que precisa existir é o projeto em gatling/.
+    if [[ -x "{{RAIZ}}/gatling/mvnw" ]]; then
+        echo "  ✓ {{RAIZ}}/gatling (projeto Maven, $(grep -o '<gatling.version>[^<]*' {{RAIZ}}/gatling/pom.xml | cut -d'>' -f2))"
     else
-        echo "  ✗ não encontrado em {{GATLING_HOME}} (defina GATLING_HOME)"; ok=1
+        echo "  ✗ projeto de carga ausente em {{RAIZ}}/gatling"; ok=1
     fi
+    echo "gerador de carga rápido:"
+    command -v oha >/dev/null 2>&1 && echo "  ✓ oha $(oha --version | awk '{print $2}')" || { echo "  ✗ oha ausente (cargo install oha)"; ok=1; }
     echo "repo oficial:"
     [[ -d "{{OFICIAL}}" ]] && echo "  ✓ {{OFICIAL}}" || { echo "  ✗ ausente"; ok=1; }
     exit $ok

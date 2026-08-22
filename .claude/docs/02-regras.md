@@ -192,7 +192,8 @@ Executa em fases sequenciais (`andThen`):
 | créditos | 1 → 110 req/s | 110 req/s |
 | extratos | 1 → 10 req/s | 10 req/s |
 
-Pico combinado: **~340 req/s**. Total aproximado: ~82.000 requisições.
+Pico combinado: **~340 req/s**. Total: **61.503 requisições** — número medido
+nas execuções do experimento 05, não estimado.
 
 Valores aleatórios: cliente 1-5, valor 1-10000, descrição alfanumérica de 10 chars.
 
@@ -226,7 +227,7 @@ extrato divergente).
 Exemplo: 10 inconsistências → **USD 8.030,10**.
 
 > **Peso relativo**: uma inconsistência custa o equivalente a 0,8 ponto percentual
-> de SLA. Numa carga de 82.000 requisições, uma falha sistêmica de concorrência
+> de SLA. Numa carga de 61.503 requisições, uma falha sistêmica de concorrência
 > gera centenas de inconsistências e zera o prêmio facilmente. **Correção primeiro,
 > velocidade depois.**
 
@@ -240,7 +241,7 @@ Exemplo: 10 inconsistências → **USD 8.030,10**.
 | Memória | 15 GB |
 | SO | Ubuntu 23.04, kernel 6.2 azure |
 | Docker | 25.0.3 |
-| Gatling | 3.10.3 (nós usamos a mais recente — ver doc 04) |
+| Gatling | 3.10.3 (nós usamos a 3.15.1 — ver doc 04) |
 | Java | OpenJDK 21.0.1 |
 
 Nossa máquina (20 vCPU / 31GB) é substancialmente mais folgada — em especial

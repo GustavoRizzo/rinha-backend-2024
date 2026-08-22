@@ -154,8 +154,18 @@ Rinha usa — `scenario`, `exec`, `http`, `jmesPath`, `checkIf`, `inject`,
 `rampUsersPerSec`, `.resources()` — é API estável há várias versões. JDK 17
 local atende.
 
-**Ação**: instalar a 3.14. Se a simulação não compilar, ajustar o mínimo
-necessário e registrar aqui; 3.10.3 fica como rede de segurança.
+**Ação**: instalada a **3.15.1** (a mais recente em ago/2026). A simulação Scala
+compilou sem alteração alguma — a avaliação de risco estava certa quanto ao DSL.
+
+⚠️ **O que a avaliação de risco NÃO previu**: a partir da 3.13 o *bundle* mudou
+de formato. Não existe mais `$GATLING_HOME/bin/gatling.sh`; o download é um
+**projeto Maven em Java**, com `mvnw` e `pom.xml`. Como a simulação oficial é
+Scala, foi preciso montar `gatling/` no repositório com o `scala-maven-plugin`.
+A execução passou a ser `./mvnw gatling:test`, e o `executar-teste-local.sh`
+oficial não funciona mais como está.
+
+**Generalizando**: ao avaliar o risco de uma atualização, olhar também o
+*empacotamento*, não só a API. Foi o empacotamento que quebrou, não o DSL.
 
 ⚠️ **Regra derivada**: **nunca comparar números entre versões diferentes do
 Gatling.** Escolhida uma versão, todas as variantes rodam nela. Se um dia
@@ -225,23 +235,69 @@ colapsa. Detalhes no doc 01, seção 1.
 
 **Conclusão**: os 4 minutos são a duração da carga. O SLA é `p98 < 250ms`, aplicado
 **a cada requisição individual**. Responder mais rápido que 250ms não gera bônus —
-o objetivo é ficar sob o limiar em 98%+ das ~82.000 requisições, com zero
+o objetivo é ficar sob o limiar em 98%+ das 61.503 requisições, com zero
 inconsistências.
 
 ---
 
 ## Concorrência
 
-*(a preencher conforme os experimentos do Bloco B)*
+### [2026-08-22] Zero inconsistências em 9 execuções da prova oficial
+**Contexto**: a hipótese inicial era que o `UPDATE ... WHERE saldo + delta >=
+-limite RETURNING` bastaria para impedir *lost update*, sem `SELECT FOR UPDATE`
+nem nível de isolamento elevado.
 
-Hipótese inicial a validar: `UPDATE ... WHERE saldo - valor >= -limite RETURNING`
-vence `SELECT FOR UPDATE` por margem larga, porque elimina um round-trip com o
-lock segurado. Sob 340 req/s concentrados em 5 linhas, o tempo de posse do lock
-domina.
+**Observado**: 9 execuções completas do Gatling (6 no experimento 05, 3 no 06),
+somando mais de 550 mil requisições. **Nenhuma inconsistência de saldo.** O
+grupo de verificações de consistência da simulação fechou 123/123 em todas.
+
+A simulação faz exatamente o que quebraria uma implementação ingênua: 25 débitos
+concorrentes tentando estourar o limite exato, e um POST seguido de 5 GETs
+paralelos exigindo que todos vejam a transação recém-criada.
+
+**Conclusão**: o `UPDATE` condicional atômico resolve leitura, validação e
+escrita numa instrução, sem janela entre ler e gravar. `READ COMMITTED` — o
+padrão do Postgres — **não** impede *lost update*; foi a estratégia que impediu,
+não o banco.
+
+**O achado mais interessante veio do fracasso**: no experimento 06 o `uvicorn`
+colapsou, derrubando 54% das requisições, com p98 de 25 segundos — e mesmo assim
+**zero inconsistências**. Um servidor sobrecarregado *recusa* requisições; ele
+não processa transações erradas. **Disponibilidade e corretude falham
+separadamente**, e é fácil confundir as duas ao ler um relatório ruim.
+
+**Pendente**: comparar contra `SELECT FOR UPDATE` para quantificar a diferença.
+A hipótese continua sendo que o lock pessimista perde por segurar o lock durante
+dois round-trips, mas isso não foi medido.
 
 ---
 
 ## Performance
+
+### [2026-08-22] O placar das decisões de desempenho
+**Contexto**: consolidação do que os seis experimentos mediram. Cada linha tem
+documento próprio em `performance/`.
+
+| Decisão | Efeito medido | Onde |
+| - | - | - |
+| Conexão de banco persistente (`CONN_MAX_AGE`) | **4,75x** de vazão | [04](./performance/04-postgres.md) |
+| Socket Unix entre nginx e API | 2,9x; amplitude de 246% para 3,9% | [03](./performance/03-nginx-e-socket-unix.md) |
+| Worker `sync` em vez de `gthread` | 2,4x | [06](./performance/06-tipos-de-worker.md) |
+| Worker `sync` em vez de ASGI/uvicorn | 4,7x | [06](./performance/06-tipos-de-worker.md) |
+| Cota de CPU nas APIs, não no banco | p98 de 217ms para 7ms | [05](./performance/05-stack-completa-gatling.md) |
+| 1 worker por API em vez de 4 | 28% (sob cota) | [04](./performance/04-postgres.md) |
+| `DEBUG=False` | 4,1% | [01](./performance/01-debug-vs-producao.md) |
+
+**Conclusão que atravessa todas**: sob cota de cgroup, **CPU por requisição é a
+única métrica que importa**. Vazão é consequência aritmética — cota dividida por
+custo. Toda decisão acima é, no fundo, a mesma decisão: gastar menos CPU por
+requisição.
+
+**A mais barata de todas foi redistribuir**: mover 0,25 CPU de serviços ociosos
+para as APIs não custou nada e derrubou o p98 de 217ms para 7ms. Só foi possível
+porque `nr_throttled` estava sendo medido por serviço.
+
+---
 
 ### [2026-08-21] `PositiveIntegerField` no Postgres é `integer` + CHECK constraint
 **Contexto**: escolhendo o tipo da coluna `Transacao.valor`, que por contrato só
@@ -289,4 +345,55 @@ somando todos os serviços.
 
 ## Erros cometidos
 
-*(a preencher — seção provavelmente a mais valiosa do documento)*
+Seção mantida deliberadamente: erros custam caro e são a parte que menos
+aparece em relatório técnico.
+
+### Afirmar sem medir
+- **"`DEBUG=True` vaza memória sob WSGI."** Afirmado com confiança em dois
+  lugares do código antes de medir. É falso: `reset_queries` está ligado ao
+  sinal `request_started` (`django/db/__init__.py:52`), então `connection.queries`
+  zera a cada requisição. O vazamento só existe fora do ciclo de request.
+- **"O Gunicorn ganha do `runserver` por causa de keep-alive."** Falso: o
+  `runserver` usa HTTP/1.1 (`basehttp.py:179`). A causa real é contenção de GIL,
+  porque ele cria uma thread por conexão sem limite (`basehttp.py:87`).
+- **"Com Postgres, mais workers vão ajudar por causa da espera de I/O."** O
+  oposto: com `synchronous_commit = off` a escrita virou CPU-bound e 4 workers
+  perderam 28%. Quem precisava de mais workers era o SQLite.
+
+### Ferramenta que mente em silêncio
+- **`summary.total` do `oha` é a DURAÇÃO, não a contagem de requisições.** O CPU
+  por requisição saiu inflado ~350x até alguém conferir a ordem de grandeza.
+- **`pontuacao.py` procurava a coluna "Total Count"**, mas o rótulo do Gatling
+  3.15 é "Total". O `.get` devolvia 0 e o total zerado virava multa máxima —
+  98 mil de multa numa execução sem nenhuma falha.
+- **`pontuacao.py` contava todo KO como inconsistência de saldo**, e cobrou USD
+  26,7 milhões por 33.305 timeouts. Timeout pesa no SLA; não é inconsistência.
+
+**Regra derivada**: todo script de medição deve **abortar** quando não
+reconhecer o que está lendo. Os três casos acima produziram números plausíveis
+em vez de erro.
+
+### Proveniência falsa
+- **A primeira versão do experimento 01 registrou um commit que não continha o
+  código medido** — nem o interruptor `DJANGO_DEBUG` existia lá. Hoje os scripts
+  abortam com a árvore suja.
+- **O `dml.sql` foi gerado com `pg_dump` depois de um smoke test**, então o
+  cliente 1 nasceu com saldo 100. O `verificar_clientes` abortou a subida da
+  stack e evitou o desastre. Agora o DML vem da fixture.
+
+### Medição sem higiene estatística
+- **A primeira execução de qualquer configuração é lixo** (757 rps contra
+  833–877 nas seguintes). Sem descartá-la, o efeito de 4% do `DEBUG` ficava
+  invisível — a ponto de a primeira medição sugerir que `DEBUG=True` era *mais
+  rápido*.
+- **Reportar mediana sem amplitude.** Uma série com 246% de amplitude não tem
+  mediana significativa; ela diz que a configuração é imprevisível.
+
+### Infraestrutura
+- **Dois projetos Compose com o mesmo `name`.** Um container remanescente da
+  stack real bloqueava a subida do rig de bancada, e o erro era engolido por um
+  `>/dev/null` — o `set -e` derrubava o script sem dizer nada.
+- **Redirecionar stderr de comando crítico para `/dev/null`.** Transformou uma
+  falha diagnosticável em falha silenciosa, duas vezes.
+- **`useradd --no-create-home`** e o gunicorn 26 logando `Permission denied` a
+  cada boot, porque cria o socket do control server no HOME.
