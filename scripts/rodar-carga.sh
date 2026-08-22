@@ -9,6 +9,8 @@ set -euo pipefail
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE="${COMPOSE_ARQUIVO:-$RAIZ/django/docker-compose.yml}"
 SLUG="${1:-django}"
+# Repassados ao compose: permitem rodar a prova oficial com cada servidor.
+export API_SERVER="${API_SERVER:-gunicorn-sync}" API_THREADS="${API_THREADS:-4}" DB_POOL="${DB_POOL:-0}"
 SIMULACAO=RinhaBackendCrebitosSimulation
 
 # `resultados/` de fora: são saídas versionadas, e uma execução anterior

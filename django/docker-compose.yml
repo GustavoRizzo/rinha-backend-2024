@@ -53,6 +53,11 @@ services:
       - DB_PERSISTENTE=1
       - DB_SKIP_MIGRATE=1
       - WEB_CONCURRENCY=1
+      # Parametrizados para o experimento 06. Os padrões são a configuração
+      # vencedora: worker sync, 1 por instância, conexão persistente sem pool.
+      - WEB_SERVER=${API_SERVER:-gunicorn-sync}
+      - WEB_THREADS=${API_THREADS:-4}
+      - DB_POOL=${DB_POOL:-0}
       - GUNICORN_BIND=unix:/sockets/api01.sock
     volumes:
       - sockets:/sockets
@@ -71,6 +76,9 @@ services:
       - DB_PERSISTENTE=1
       - DB_SKIP_MIGRATE=1
       - WEB_CONCURRENCY=1
+      - WEB_SERVER=${API_SERVER:-gunicorn-sync}
+      - WEB_THREADS=${API_THREADS:-4}
+      - DB_POOL=${DB_POOL:-0}
       - GUNICORN_BIND=unix:/sockets/api02.sock
 
   nginx:
