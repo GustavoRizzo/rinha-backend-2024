@@ -15,6 +15,7 @@ import json
 import pathlib
 import re
 import sys
+from html import unescape
 
 PREMIO = 100_000.00
 MULTA_SLA_POR_PONTO = 1_000.00
@@ -34,6 +35,43 @@ def numeros_da_linha_global(html: str) -> dict[str, int]:
                             html, re.S)
     rotulos = {int(col): rotulo.strip() for col, rotulo in cabecalhos}
     return {rotulos.get(col, f"col{col}"): valor for col, valor in por_coluna.items()}
+
+
+def erros_por_tipo(html: str) -> list[tuple[str, int]]:
+    """Extrai a tabela de erros: (mensagem, contagem)."""
+    bloco = re.search(r'<table id="container_errors".*?</table>', html, re.S)
+    if not bloco:
+        return []
+    celulas = re.findall(r"<td[^>]*>(.*?)</td>", bloco.group(0), re.S)
+    erros = []
+    for i in range(0, len(celulas) - 2, 3):
+        mensagem = unescape(re.sub(r"<span.*?</span>|<[^>]+>", "", celulas[i], flags=re.S)).strip()
+        try:
+            erros.append((mensagem, int(celulas[i + 1])))
+        except ValueError:
+            continue
+    return erros
+
+
+def classifica_erros(erros: list[tuple[str, int]]) -> tuple[int, int]:
+    """Separa inconsistências de saldo das demais falhas.
+
+    A multa de consistência da Rinha vale para "cada resposta do teste que
+    detectar inconsistência no saldo do cliente". Na simulação, essas
+    verificações são asserções `jmesPath` sobre saldo, limite e
+    ultimas_transacoes. Um timeout ou um HTTP 502 é falha de requisição: pesa no
+    SLA (a requisição não respondeu abaixo de 250ms), mas NÃO é inconsistência.
+
+    Contar as duas coisas juntas produz números absurdos — a primeira versão
+    deste script cobrou USD 26,7 milhões de multa por 33.305 timeouts.
+    """
+    inconsistencias = falhas = 0
+    for mensagem, quantidade in erros:
+        if "jmespath" in mensagem.lower():
+            inconsistencias += quantidade
+        else:
+            falhas += quantidade
+    return inconsistencias, falhas
 
 
 def faixas_de_resposta(html: str) -> dict[str, int]:
@@ -77,9 +115,16 @@ def main() -> None:
     dentro_do_sla = faixas[primeira]
     pct_sucesso = dentro_do_sla / total * 100 if total else 0.0
 
-    # Cada resposta que acusa inconsistência de saldo vira uma falha de check no
-    # Gatling, ou seja, uma requisição KO.
-    inconsistencias = ko
+    erros = erros_por_tipo(html)
+    inconsistencias, falhas = classifica_erros(erros)
+    if ko and not erros:
+        # Silêncio aqui vira multa zero numa execução cheia de falhas.
+        sys.exit(f"há {ko} KO mas não consegui ler a tabela de erros do relatório")
+    if erros and inconsistencias + falhas != ko:
+        print(
+            f"aviso: a soma dos erros ({inconsistencias + falhas}) não bate com "
+            f"o total de KO ({ko}); a tabela de erros pode estar truncada."
+        )
 
     multa_sla = max(0.0, SLA_ALVO_PCT - pct_sucesso) * MULTA_SLA_POR_PONTO
     multa_consistencia = inconsistencias * MULTA_INCONSISTENCIA
@@ -87,8 +132,15 @@ def main() -> None:
 
     print(f"requisições totais           {total:>12,}")
     print(f"abaixo de {LIMIAR_MS}ms             {dentro_do_sla:>12,}  ({pct_sucesso:.3f}%)")
-    print(f"inconsistências (KO)         {inconsistencias:>12,}")
+    print(f"requisições que falharam     {falhas:>12,}  (timeout, 5xx, conexão)")
+    print(f"inconsistências de saldo     {inconsistencias:>12,}  (asserções jmesPath)")
     print()
+    if erros:
+        print("  erros por tipo:")
+        for mensagem, quantidade in erros[:6]:
+            marca = "INCONSISTÊNCIA" if "jmespath" in mensagem.lower() else "falha"
+            print(f"    {quantidade:>7,}  [{marca}] {mensagem[:64]}")
+        print()
     for rotulo, contagem in faixas.items():
         print(f"  {rotulo:34}{contagem:>10,}")
     print()
@@ -101,6 +153,7 @@ def main() -> None:
         "requisicoes_total": total,
         "abaixo_de_250ms": dentro_do_sla,
         "pct_abaixo_de_250ms": round(pct_sucesso, 4),
+        "requisicoes_falhas": falhas,
         "inconsistencias": inconsistencias,
         "multa_sla_usd": round(multa_sla, 2),
         "multa_consistencia_usd": round(multa_consistencia, 2),

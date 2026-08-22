@@ -11,7 +11,9 @@ Postgres, 0.40 CPU por API.
 **satura**: com p98 de 7ms contra um SLA de 250ms, toda configuração razoável
 marca USD 100.000 e a métrica perde resolução. O `oha` em saturação mede a
 **folga**, que é onde a diferença entre servidores aparece. O Gatling entra como
-confirmação de que a configuração passa na prova, não como comparador.
+confirmação de que a configuração passa na prova, não como comparador — e a
+seção 6 mostra o quanto isso se confirmou: `sync` e `gthread` tiraram a **mesma
+nota máxima** com 59% de diferença de vazão entre eles.
 
 ---
 
@@ -162,7 +164,89 @@ numa comparação Django vs. FastAPI, o servidor deixa de ser variável escondid
 
 ---
 
-## 6. Sem restrição de CPU e memória
+## 6. A prova oficial: o Gatling confirma, mas quase não diferencia
+
+Cada configuração rodou a simulação completa, na stack de 1.50 CPU / 550MB.
+
+```
+configuração        %<250ms   p98      max   falhas  inconsist.     pontuação
+sync                100.000%    7ms    111ms       0          0    100.000,00
+gthread 4 threads   100.000%    5ms     94ms       0          0    100.000,00
+uvicorn + pool       25.849%   25s      36s  33.305          0     27.849,15
+```
+
+### O `gthread` é 59% mais lento e tira a mesma nota
+
+Este é o ponto que justifica ter dois instrumentos. Em saturação, o `gthread`
+entrega 200,8 rps contra 483,9 do `sync` — **59% menos**. Na prova oficial, os
+dois marcam **100.000**, e o `gthread` até teve um p98 melhor no sorteio daquela
+execução (5ms contra 7ms).
+
+Não há contradição: a carga da Rinha pede 170 rps por instância, e o `gthread`
+tem teto de ~200. Ele passa **raspando**, e o relatório não mostra isso. **A
+pontuação satura** — não existe nota acima de 100.000, então qualquer folga
+acima do necessário é invisível.
+
+É por isso que o `oha` em saturação é o instrumento de comparação aqui, e o
+Gatling é o de aprovação. Medir folga e medir aprovação são perguntas
+diferentes.
+
+### O `uvicorn` colapsa, e a aritmética previa
+
+A previsão foi registrada **antes** da execução:
+
+> Teto de 102 rps por instância × 2 instâncias = 204 rps de capacidade, contra
+> 340 rps injetados. Em modelo aberto, taxa de chegada acima da taxa de
+> atendimento significa fila crescendo sem limite. Previsão: reprova.
+
+O resultado: **54% de KO, p98 de 25 segundos, resposta mais lenta de 36
+segundos**. Não é "ficou lento": é o colapso progressivo que o doc 01 descreve
+como consequência inevitável do modelo aberto. Não existe patamar estável abaixo
+da taxa de chegada — ou você escoa, ou a fila vai ao infinito.
+
+Os erros contam a história da falha em cascata:
+
+```
+16.319  PrematureCloseException      conexões derrubadas
+10.651  HTTP 502 (esperava 200/422)  nginx sem backend disponível
+ 5.373  HTTP 502
+   455  HTTP 500                     pool de conexões esgotado
+```
+
+**Uma medição de 10 segundos com `oha` previu o resultado de uma prova de 4
+minutos.** Esse é o argumento prático para ter o instrumento rápido.
+
+### Nenhuma configuração produziu inconsistência de saldo
+
+Mesmo no colapso do `uvicorn`, o grupo de verificações de consistência fechou
+**123 de 123, sem falha**. Todos os 33.305 KO são falhas de requisição —
+timeout, 502, 500 — e nenhum é saldo inconsistente.
+
+Faz sentido: a corretude vive no `UPDATE ... WHERE saldo + delta >= -limite
+RETURNING`, que ou executa inteiro ou não executa. Um servidor sobrecarregado
+**recusa** requisições; ele não processa transações erradas.
+
+> Isso separa duas propriedades que é fácil confundir: **disponibilidade** foi
+> destruída, **corretude** não foi arranhada.
+
+### Um defeito que este resultado revelou no `pontuacao.py`
+
+A primeira versão do script contava todo KO como inconsistência de saldo, e
+cobrou **USD 26,7 milhões** de multa pelos 33.305 timeouts do `uvicorn` — uma
+pontuação de −26.716.398,90.
+
+O regulamento é específico: a multa de consistência vale por "cada resposta que
+detectar inconsistência no saldo do cliente". Na simulação, isso são asserções
+`jmesPath`. Um 502 pesa no SLA (a requisição não respondeu abaixo de 250ms), mas
+não é inconsistência.
+
+O script agora classifica os erros por tipo e **aborta** se houver KO sem
+conseguir ler a tabela de erros — silêncio ali viraria multa zero numa execução
+cheia de falhas.
+
+---
+
+## 7. Sem restrição de CPU e memória
 
 *(fora do regulamento, por curiosidade)*
 
@@ -224,7 +308,7 @@ paralelismo seja inútil.
 
 ---
 
-## 7. Previsões: e se trocássemos de framework ou de linguagem?
+## 8. Previsões: e se trocássemos de framework ou de linguagem?
 
 **Esta seção é especulação, não medição.** Está aqui com números explícitos para
 poder ser conferida depois — se as previsões estiverem erradas, o registro fica.
@@ -333,18 +417,21 @@ nenhuma.
 
 ---
 
-## 8. Ações decorrentes
+## 9. Ações decorrentes
 
 - [x] `WEB_SERVER` seleciona `gunicorn-sync`, `gunicorn-gthread` ou `uvicorn`.
 - [x] Pool de conexões do psycopg disponível via `DB_POOL=1`.
 - [x] `docker-compose.yml` parametrizado, com padrão na configuração vencedora.
 - [x] **Decisão: o worker sync fica.** É o padrão do projeto.
+- [x] `pontuacao.py` separa falhas de requisição de inconsistências de saldo,
+      e aborta se houver KO sem tabela de erros legível.
+- [x] Relatórios das três variantes versionados em `resultados/django*/`.
 - [ ] Experimento futuro: FastAPI com views `async` e `asyncpg` — async de ponta
       a ponta, que é o teste que este experimento não fez.
 
 ---
 
-## 9. Aprendizados transversais
+## 10. Aprendizados transversais
 
 - **Sob cota, CPU por requisição é a única métrica que importa.** Vazão é
   consequência: cota ÷ custo.
@@ -356,3 +443,11 @@ nenhuma.
   configuração imprevisível.
 - **Concorrência não é paralelismo.** Threads sob GIL adicionam custo sem
   adicionar vazão quando o trabalho é CPU.
+- **Uma métrica saturada não compara.** Enquanto todos passam com folga, a
+  pontuação da competição não distingue configurações que diferem 2,4x em
+  vazão. Precisa de um segundo instrumento que meça folga.
+- **Disponibilidade e corretude falham separado.** O `uvicorn` derrubou 54%
+  das requisições sem produzir uma única inconsistência de saldo.
+- **Aritmética de fila prevê resultado.** Uma série de 10s com `oha` antecipou
+  o desfecho de uma prova de 4 minutos, pela Lei de Little e pelo modelo
+  aberto.

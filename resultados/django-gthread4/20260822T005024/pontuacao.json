@@ -10,8 +10,8 @@
   "percentis_ms": {
     "50th pct": "2",
     "75th pct": "3",
-    "98th pct": "7",
-    "99th pct": "9",
-    "Max": "89"
+    "98th pct": "5",
+    "99th pct": "6",
+    "Max": "94"
   }
 }
