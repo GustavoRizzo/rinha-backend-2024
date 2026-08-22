@@ -21,8 +21,10 @@ config="${1:?config}"; endpoint="${2:?endpoint}"; duracao="${3:-15s}"; rps="${4:
 
 # Um benchmark grava o commit junto do resultado. Com a árvore suja esse hash
 # descreve outro código — proveniência falsa é pior que proveniência nenhuma.
+# `resultados/` fica de fora da conferência: são SAÍDAS versionadas, e uma
+# execução anterior deixaria a árvore suja para a próxima.
 # Para exploração deliberada, sem intenção de documentar: BENCH_PERMITIR_SUJO=1
-if [[ -n "$(git -C "$RAIZ" status --porcelain 2>/dev/null)" ]]; then
+if [[ -n "$(git -C "$RAIZ" status --porcelain -- . ':(exclude)resultados' 2>/dev/null)" ]]; then
     if [[ "${BENCH_PERMITIR_SUJO:-0}" != "1" ]]; then
         echo "ABORTADO: árvore de trabalho suja." >&2
         echo "  Commite antes de medir — o resultado grava o hash do commit." >&2

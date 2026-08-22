@@ -25,7 +25,7 @@ CONCORRENCIA="${BENCH_CONCORRENCIA:-50}"
 rig="${1:?rig}"; cpus="${2:?cpus}"; workers="${3:?workers}"
 duracao="${4:-10s}"; reps="${5:-5}"; rps="${6:-}"
 
-if [[ -n "$(git -C "$RAIZ" status --porcelain 2>/dev/null)" && "${BENCH_PERMITIR_SUJO:-0}" != "1" ]]; then
+if [[ -n "$(git -C "$RAIZ" status --porcelain -- . ':(exclude)resultados' 2>/dev/null)" && "${BENCH_PERMITIR_SUJO:-0}" != "1" ]]; then
     echo "ABORTADO: árvore suja. O resultado grava o hash do commit." >&2
     exit 1
 fi

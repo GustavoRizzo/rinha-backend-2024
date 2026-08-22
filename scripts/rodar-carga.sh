@@ -11,7 +11,9 @@ COMPOSE="${COMPOSE_ARQUIVO:-$RAIZ/django/docker-compose.yml}"
 SLUG="${1:-django}"
 SIMULACAO=RinhaBackendCrebitosSimulation
 
-if [[ -n "$(git -C "$RAIZ" status --porcelain 2>/dev/null)" && "${BENCH_PERMITIR_SUJO:-0}" != "1" ]]; then
+# `resultados/` de fora: são saídas versionadas, e uma execução anterior
+# deixaria a árvore suja para a próxima.
+if [[ -n "$(git -C "$RAIZ" status --porcelain -- . ':(exclude)resultados' 2>/dev/null)" && "${BENCH_PERMITIR_SUJO:-0}" != "1" ]]; then
     echo "ABORTADO: árvore suja. O resultado grava o hash do commit." >&2
     exit 1
 fi
