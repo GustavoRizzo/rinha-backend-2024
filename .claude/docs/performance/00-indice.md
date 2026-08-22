@@ -9,7 +9,7 @@ Cada experimento tem arquivo próprio. A convenção de escrita está descrita e
 | [02](./02-container-e-cgroup.md) | Container + cgroup (SQLite): workers sob cota, throttling | 2026-08-21 | **parcial** |
 | [03](./03-nginx-e-socket-unix.md) | nginx na frente, e o que um socket Unix vale | 2026-08-21 | **concluído** |
 | [04](./04-postgres.md) | Postgres: leitura, escrita e o custo de `CONN_MAX_AGE` | 2026-08-21 | **concluído** |
-| 05 | Stack completa (2 instâncias) + Gatling | — | **próximo** |
+| [05](./05-stack-completa-gatling.md) | Stack completa (2 instâncias) + Gatling: **USD 100.000, zero inconsistências** | 2026-08-21 | **concluído** |
 | 06 | Worker e protocolo: `gthread`, ASGI/uvicorn, async | — | planejado |
 
 ## Regras de ouro destes documentos
