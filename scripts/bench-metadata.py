@@ -39,7 +39,7 @@ def main() -> None:
             "kernel": platform.release(),
             "python": platform.python_version(),
         },
-        "banco": "sqlite",
+        "banco": os.environ.get("BENCH_BANCO", "sqlite"),
         "resultado": bruto,
     } | extras
     with open(destino, "w") as saida:

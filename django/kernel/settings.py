@@ -84,12 +84,41 @@ WSGI_APPLICATION = 'kernel.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# O banco vem do ambiente para permitir o comparativo SQLite vs. Postgres sem
+# tocar em código. Ver `.claude/docs/performance/04-postgres.md`.
+if os.environ.get("DB_HOST"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("DB_NAME", "rinha"),
+            "USER": os.environ.get("DB_USER", "rinha"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", "rinha"),
+            "HOST": os.environ["DB_HOST"],
+            "PORT": os.environ.get("DB_PORT", "5432"),
+            # CONN_MAX_AGE é o parâmetro mais caro deste arquivo. Com 0 (o padrão
+            # do Django) cada requisição abre uma conexão nova: TCP, autenticação
+            # e criação de um PROCESSO no servidor Postgres. Com None a conexão
+            # persiste pelo tempo de vida do worker.
+            "CONN_MAX_AGE": None if os.environ.get("DB_PERSISTENTE", "1") == "1" else 0,
+            # Sem isto, uma conexão persistente derrubada pelo servidor só é
+            # descoberta quando a query falha.
+            "CONN_HEALTH_CHECKS": True,
+            "OPTIONS": {"connect_timeout": 2},
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+            "OPTIONS": {
+                # WAL permite leitura concorrente com escrita; sem isso os POSTs
+                # concorrentes viram "database is locked" em vez de fila.
+                "init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;",
+                "transaction_mode": "IMMEDIATE",
+            },
+        }
+    }
 
 
 # Password validation
