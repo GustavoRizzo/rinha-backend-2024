@@ -175,7 +175,7 @@ que **conteinerizar não custou vazão perceptível**.
 em taxa fixa de 170 rps. Mesma imagem, mesmo binário — muda só a demanda.
 
 E o dado que interessa para a Rinha: a 170 rps (a fatia de uma instância), com
-socket Unix, o p99 é de **2,8ms**, com o nginja e a API somando ~0,29 CPU.
+socket Unix, o p99 é de **2,8ms**, com o nginx e a API somando ~0,29 CPU.
 
 ---
 
