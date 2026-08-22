@@ -268,6 +268,29 @@ bench-03:
     done
     just bench-tabela
 
+# gera infra/sql/{ddl,dml}.sql a partir do schema real (exige a stack de pé)
+[group('django')]
+gen-sql:
+    @bash {{RAIZ}}/scripts/gerar-sql.sh
+
+# reproduz o experimento 04: Postgres vs SQLite, leitura e escrita
+[group('bench')]
+bench-04:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.45 1 10s 5
+    for w in 1 2 4; do
+        BENCH_ENDPOINT=transacoes bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.45 "$w" 10s 5
+    done
+    for w in 1 4; do
+        BENCH_ENDPOINT=transacoes bash {{RAIZ}}/scripts/bench-stack.sh nginx-unix 0.45 "$w" 10s 5
+    done
+    BENCH_ENDPOINT=transacoes bash {{RAIZ}}/scripts/bench-stack.sh postgres-sem-persistencia 0.45 1 10s 5
+    for w in 1 2; do
+        BENCH_ENDPOINT=transacoes bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.45 "$w" 10s 3 170
+    done
+    just bench-tabela
+
 # imprime a tabela comparativa das séries já executadas
 [group('bench')]
 bench-tabela:

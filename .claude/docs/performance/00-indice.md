@@ -8,9 +8,9 @@ Cada experimento tem arquivo próprio. A convenção de escrita está descrita e
 | [01](./01-debug-vs-producao.md) | Custo do `DEBUG=True` e de `runserver` vs. Gunicorn (SQLite) | 2026-08-21 | **concluído** |
 | [02](./02-container-e-cgroup.md) | Container + cgroup (SQLite): workers sob cota, throttling | 2026-08-21 | **parcial** |
 | [03](./03-nginx-e-socket-unix.md) | nginx na frente, e o que um socket Unix vale | 2026-08-21 | **concluído** |
-| 04 | Adição do Postgres | — | **próximo** |
-| 05 | Worker e protocolo: `sync` vs. `gthread` vs. ASGI/uvicorn | — | planejado |
-| 06 | Stack completa (2 instâncias) + Gatling | — | planejado |
+| [04](./04-postgres.md) | Postgres: leitura, escrita e o custo de `CONN_MAX_AGE` | 2026-08-21 | **concluído** |
+| 05 | Stack completa (2 instâncias) + Gatling | — | **próximo** |
+| 06 | Worker e protocolo: `gthread`, ASGI/uvicorn, async | — | planejado |
 
 ## Regras de ouro destes documentos
 
