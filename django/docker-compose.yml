@@ -1,0 +1,95 @@
+name: rinha-backend-django
+
+# Stack completa da Rinha: load balancer + 2 APIs + banco.
+#
+# Orçamento: 1.5 CPU e 550MB SOMANDO TUDO. A distribuição abaixo é fruto dos
+# experimentos 01 a 04, não de chute:
+#   - 1 worker por API (exp. 04: com Postgres, 2 workers perdem 14% e 4 perdem 28%)
+#   - socket Unix entre nginx e APIs (exp. 03: 2,9x em vazão alta)
+#   - conexão de banco persistente (exp. 04: CONN_MAX_AGE=0 custa 4,75x)
+#   - schema e carga inicial via infra/sql/, executados pela imagem do Postgres
+#     na criação do volume: com duas APIs, deixá-las migrar é uma corrida
+#
+# Confira a soma com: just check django
+services:
+  db:
+    image: postgres:18-alpine
+    hostname: db
+    environment:
+      - POSTGRES_DB=rinha
+      - POSTGRES_USER=rinha
+      - POSTGRES_PASSWORD=rinha
+    volumes:
+      - ../infra/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      # Executados UMA vez, em ordem alfabética, na criação do volume.
+      - ../infra/sql:/docker-entrypoint-initdb.d:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      # -h 127.0.0.1 de propósito: durante a inicialização a imagem sobe um
+      # servidor TEMPORÁRIO que escuta apenas no socket Unix.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U rinha -d rinha"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: "318MB"
+
+  api01: &api
+    build:
+      context: .
+    hostname: api01
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: &api-env
+      - DJANGO_DEBUG=0
+      - DB_HOST=db
+      - DB_PERSISTENTE=1
+      - DB_SKIP_MIGRATE=1
+      - WEB_CONCURRENCY=1
+      - GUNICORN_BIND=unix:/sockets/api01.sock
+    volumes:
+      - sockets:/sockets
+    deploy:
+      resources:
+        limits:
+          cpus: "0.30"
+          memory: "100MB"
+
+  api02:
+    <<: *api
+    hostname: api02
+    environment:
+      - DJANGO_DEBUG=0
+      - DB_HOST=db
+      - DB_PERSISTENTE=1
+      - DB_SKIP_MIGRATE=1
+      - WEB_CONCURRENCY=1
+      - GUNICORN_BIND=unix:/sockets/api02.sock
+
+  nginx:
+    image: nginx:1.29-alpine
+    depends_on:
+      - api01
+      - api02
+    volumes:
+      - ../infra/nginx/nginx-rinha.conf:/etc/nginx/nginx.conf:ro
+      - sockets:/sockets
+    ports:
+      - "9999:9999"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.15"
+          memory: "32MB"
+
+volumes:
+  sockets:
+
+networks:
+  default:
+    driver: bridge
+    name: rinha-django

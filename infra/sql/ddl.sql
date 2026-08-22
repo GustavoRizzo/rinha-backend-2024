@@ -6,7 +6,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict SgUxoL2qhY3XTLK1cFbPpH1TyYdMHwzr7oVeYpsB3TcVbk1CF64eXiwFPw42B9t
+\restrict RMWauNugM0eKsmSsAG5nvERsgvgjgNCQ70Qt24KFP2BbV0KpZaa5jN6lt2iQkEI
 
 -- Dumped from database version 18.6
 -- Dumped by pg_dump version 18.6
@@ -141,7 +141,7 @@ CREATE INDEX idx_transacao_extrato ON public.crebitos_transacao USING btree (cli
 -- PostgreSQL database dump complete
 --
 
-\unrestrict SgUxoL2qhY3XTLK1cFbPpH1TyYdMHwzr7oVeYpsB3TcVbk1CF64eXiwFPw42B9t
+\unrestrict RMWauNugM0eKsmSsAG5nvERsgvgjgNCQ70Qt24KFP2BbV0KpZaa5jN6lt2iQkEI
 
 
 -- Marca as migrations como aplicadas: sem isto o Django tentaria criar
@@ -150,7 +150,7 @@ CREATE INDEX idx_transacao_extrato ON public.crebitos_transacao USING btree (cli
 -- PostgreSQL database dump
 --
 
-\restrict Xful1WLHY4auOVnvQSjBN19NruYFLxyGb4JNQHGPxAJhW4G6la44NfQSMUWlpy0
+\restrict T60Fi5nVSYGtjIradjgGmlg9phydDjpiNpFCk7yTNEhgJnS7VaQ5yfuTBcd71cV
 
 -- Dumped from database version 18.6
 -- Dumped by pg_dump version 18.6
@@ -187,5 +187,5 @@ SELECT pg_catalog.setval('public.django_migrations_id_seq', 1, true);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Xful1WLHY4auOVnvQSjBN19NruYFLxyGb4JNQHGPxAJhW4G6la44NfQSMUWlpy0
+\unrestrict T60Fi5nVSYGtjIradjgGmlg9phydDjpiNpFCk7yTNEhgJnS7VaQ5yfuTBcd71cV
 

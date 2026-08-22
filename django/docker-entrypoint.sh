@@ -6,8 +6,14 @@
 # 10s para morrer em toda derrubada.
 set -e
 
-python manage.py migrate --no-input
-python manage.py loaddata clientes
+# Com DUAS instâncias, deixar as duas rodarem `migrate` é uma corrida: ambas
+# tentam criar as mesmas tabelas. Na stack completa o schema e a carga inicial
+# vêm de infra/sql/, executados uma única vez pela imagem do Postgres na criação
+# do volume — antes de qualquer API existir.
+if [ "${DB_SKIP_MIGRATE:-0}" != "1" ]; then
+    python manage.py migrate --no-input
+    python manage.py loaddata clientes
+fi
 
 # Só no rig de benchmark: planta histórico para o extrato não medir lista vazia.
 if [ "${BENCH_SEED:-0}" = "1" ]; then
