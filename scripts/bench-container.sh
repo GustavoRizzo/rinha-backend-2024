@@ -27,7 +27,12 @@ compose_args=(-f "$COMPOSE_BASE")
 [[ "$rede" == "host" ]] && compose_args+=(-f "$RAIZ/django/compose.bench-sqlite.host.yml")
 
 export API_CPUS="$cpus" API_WORKERS="$workers" API_PORTA="$PORTA"
-docker compose "${compose_args[@]}" up -d --build >/dev/null 2>&1
+# stderr preservado: com `2>&1 >/dev/null`, uma falha de subida derrubava o
+# script em silêncio por causa do `set -e`, sem dizer o motivo.
+if ! docker compose "${compose_args[@]}" up -d --build >/dev/null; then
+    echo "ABORTADO: a stack não subiu (veja o erro do compose acima)." >&2
+    exit 1
+fi
 limpar() { docker compose "${compose_args[@]}" down >/dev/null 2>&1 || true; }
 trap limpar EXIT
 

@@ -1,6 +1,7 @@
-# Nome do projeto no Docker: sem isto o Compose usaria o nome do diretório
-# (`django`), genérico demais para achar entre outros projetos.
-name: rinha-backend-django
+# Nome de projeto PRÓPRIO, distinto do da stack de produção: com o mesmo
+# nome, o Compose trata os dois como o mesmo projeto e tenta reconciliar —
+# um container remanescente da stack real bloqueia a subida do rig.
+name: rinha-backend-django-bench
 
 # Rig do experimento 04: nginx + UMA API + Postgres.
 #
