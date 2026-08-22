@@ -23,10 +23,48 @@ fi
 # Falhar aqui é muito melhor que descobrir a divergência no relatório da carga.
 python manage.py verificar_clientes
 
-# GUNICORN_BIND permite `unix:/sockets/api01.sock` no lugar de host:porta.
-# --umask 0 deixa o socket acessível ao nginx, que roda com outro usuário.
-exec gunicorn kernel.wsgi:application \
-    --bind "${GUNICORN_BIND:-0.0.0.0:${PORTA:-8080}}" \
-    --umask 0 \
-    --workers "${WEB_CONCURRENCY:-1}" \
-    --error-logfile - --log-level warning
+# Servidor escolhido por ambiente, para o comparativo do experimento 06.
+# GUNICORN_BIND aceita `unix:/sockets/api01.sock` no lugar de host:porta.
+#
+# umask 0 é essencial nos três casos: o socket precisa ser acessível ao nginx,
+# que roda com outro usuário. O gunicorn tem a opção --umask; o uvicorn não,
+# então definimos no shell e ele herda.
+umask 0
+
+case "${WEB_SERVER:-gunicorn-sync}" in
+    gunicorn-sync)
+        exec gunicorn kernel.wsgi:application \
+            --bind "${GUNICORN_BIND:-0.0.0.0:${PORTA:-8080}}" \
+            --umask 0 \
+            --workers "${WEB_CONCURRENCY:-1}" \
+            --error-logfile - --log-level warning
+        ;;
+    gunicorn-gthread)
+        # Pool de threads de tamanho FIXO. Diferença crucial para o runserver do
+        # experimento 01, que criava uma thread por conexão sem limite e
+        # colapsava por disputa de GIL. Este worker também faz keep-alive, que o
+        # sync recusa (sync.py:177, resp.force_close).
+        exec gunicorn kernel.wsgi:application \
+            --bind "${GUNICORN_BIND:-0.0.0.0:${PORTA:-8080}}" \
+            --umask 0 \
+            --worker-class gthread \
+            --workers "${WEB_CONCURRENCY:-1}" \
+            --threads "${WEB_THREADS:-4}" \
+            --error-logfile - --log-level warning
+        ;;
+    uvicorn)
+        # ASGI. As views deste projeto são SÍNCRONAS, então o Django as executa
+        # num pool de threads — o async aqui é do servidor HTTP, não da
+        # aplicação. É exatamente essa a hipótese em teste.
+        caminho_socket=${GUNICORN_BIND#unix:}
+        exec uvicorn kernel.asgi:application \
+            --uds "$caminho_socket" \
+            --workers "${WEB_CONCURRENCY:-1}" \
+            --log-level warning \
+            --no-access-log
+        ;;
+    *)
+        echo "WEB_SERVER desconhecido: ${WEB_SERVER}" >&2
+        exit 1
+        ;;
+esac

@@ -47,6 +47,8 @@ services:
       - GUNICORN_BIND=unix:/sockets/api01.sock
       - DB_HOST=db
       - DB_PERSISTENTE=${DB_PERSISTENTE:-1}
+      - WEB_SERVER=${API_SERVER:-gunicorn-sync}
+      - WEB_THREADS=${API_THREADS:-4}
     volumes:
       - sockets:/sockets
     deploy:

@@ -7,6 +7,10 @@
 #
 # Uso: bench-stack.sh <rig> <cpus> <workers> [duracao] [reps] [rps]
 #   rig: nginx-unix | nginx-tcp | postgres | postgres-sem-persistencia
+#        | postgres-sem-limite   (remove as cotas de CPU/memória)
+#
+# BENCH_SERVER=gunicorn-sync|gunicorn-gthread|uvicorn escolhe o servidor HTTP.
+# BENCH_THREADS=N define o tamanho do pool do gthread.
 #
 # BENCH_ENDPOINT=transacoes mede a ESCRITA. Fica em variável de ambiente, e
 # não como argumento posicional, para não quebrar os comandos publicados no
@@ -17,6 +21,8 @@ RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BASE_SQLITE="$RAIZ/django/compose.bench-nginx.yml"
 BASE_PG="$RAIZ/django/compose.bench-postgres.yml"
 ENDPOINT="${BENCH_ENDPOINT:-extrato}"
+SERVIDOR="${BENCH_SERVER:-gunicorn-sync}"
+THREADS="${BENCH_THREADS:-4}"
 API=rinha-bench-api01
 LB=rinha-bench-nginx
 PORTA="${LB_PORTA:-9999}"
@@ -34,6 +40,9 @@ case "$rig" in
     nginx-unix) compose_args=(-f "$BASE_SQLITE") ;;
     nginx-tcp)  compose_args=(-f "$BASE_SQLITE" -f "$RAIZ/django/compose.bench-nginx-tcp.yml") ;;
     postgres)   compose_args=(-f "$BASE_PG"); export BENCH_BANCO=postgres ;;
+    postgres-sem-limite)
+        compose_args=(-f "$BASE_PG" -f "$RAIZ/django/compose.bench-sem-limite.yml")
+        export BENCH_BANCO=postgres ;;
     # Mede o custo de abrir uma conexão nova a cada requisição (CONN_MAX_AGE=0,
     # que é o PADRÃO do Django).
     postgres-sem-persistencia)
@@ -42,6 +51,7 @@ case "$rig" in
 esac
 
 export API_CPUS="$cpus" API_WORKERS="$workers" LB_PORTA="$PORTA"
+export API_SERVER="$SERVIDOR" API_THREADS="$THREADS"
 docker compose "${compose_args[@]}" up -d --build >/dev/null 2>&1
 trap 'docker compose "${compose_args[@]}" down -v >/dev/null 2>&1 || true' EXIT
 
@@ -71,7 +81,12 @@ if [[ -n "$rps" ]]; then
     taxa=(-q "$rps" --latency-correction); modelo="aberto(${rps}rps)"
 fi
 
-config="${rig}-${ENDPOINT}-cpu${cpus}-w${workers}"
+# O nome do servidor entra no slug: sem isso uma série de gthread
+# sobrescreveria a de sync na mesma cota.
+sufixo_servidor="$SERVIDOR"
+[[ "$SERVIDOR" == "gunicorn-gthread" ]] && sufixo_servidor="gthread${THREADS}t"
+[[ "$SERVIDOR" == "gunicorn-sync" ]] && sufixo_servidor="sync"
+config="${rig}-${sufixo_servidor}-${ENDPOINT}-cpu${cpus}-w${workers}"
 [[ -n "$rps" ]] && config="${config}-${rps}rps"
 
 echo "[$config] aquecimento (descartado)..." >&2

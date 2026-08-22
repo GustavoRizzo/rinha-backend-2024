@@ -1,0 +1,12 @@
+# Override que REMOVE as restrições de CPU e memória.
+#
+# Fora do regulamento de propósito: serve para responder "quanto a aplicação
+# entrega quando a cota não é o gargalo?" — e, por diferença, quanto a cota
+# está custando. Não use para nada que vá comparar com a competição.
+services:
+  db:
+    deploy: !reset null
+  api01:
+    deploy: !reset null
+  nginx:
+    deploy: !reset null
