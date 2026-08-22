@@ -224,7 +224,116 @@ paralelismo seja inútil.
 
 ---
 
-## 7. Ações decorrentes
+## 7. Previsões: e se trocássemos de framework ou de linguagem?
+
+**Esta seção é especulação, não medição.** Está aqui com números explícitos para
+poder ser conferida depois — se as previsões estiverem erradas, o registro fica.
+
+### O que os dados já dizem sobre onde está o gargalo
+
+A pergunta natural é se trocar de linguagem adiantaria, ou se o gargalo real é o
+banco e a rede. **Neste projeto, os dados respondem: o gargalo é a aplicação.**
+
+| serviço | períodos throttlados, sob carga da Rinha |
+| - | - |
+| APIs | 95% (saturação) / 1,4% (carga real) |
+| Postgres | 0,3–0,5% |
+| nginx | 0,1–0,7% |
+
+O banco e o balanceador ficam com folga enquanto as APIs congelam. E o custo por
+requisição confirma: **862 µs na API contra ~110 µs no nginx**. O trabalho está
+no Python.
+
+### FastAPI com views `async` e `asyncpg`
+
+**Previsão: ganho real, porém modesto — algo entre 1,5x e 3x.**
+
+Continua sendo CPython, e é aí que mora a maior parte dos 862 µs. O que se
+ganharia: Starlette é mais enxuto que a pilha de request/response do Django, e o
+Pydantic v2 valida com núcleo em Rust. O que **não** se ganharia tanto quanto se
+imagina: nosso caminho quente já usa SQL cru, então o custo do ORM do Django já
+não está sendo pago.
+
+Chute concreto: **300–500 µs por requisição**, contra 862 µs hoje.
+
+Um ganho estrutural, esse sim, seria eliminar o problema que este experimento
+encontrou: com views `async` de verdade e `asyncpg`, não existe thread por
+requisição, e portanto não existe o "uma conexão de Postgres por requisição
+concorrente" que nos obrigou a introduzir pool.
+
+### Go
+
+**Previsão: ganho grande — 8x a 15x menos CPU por requisição.**
+
+Compilado, sem GIL, goroutines baratas, `pgx` excelente. Chute: **50–100 µs por
+requisição**, o que sob a mesma cota de 0.40 CPU daria um teto de **4.000 a 8.000
+rps**, contra os 484 medidos.
+
+**Mas há uma armadilha que este projeto já pisou.** O experimento 02 mediu
+`os.cpu_count() = 20` dentro de um container com 0.40 CPU: **o cgroup limita a
+cota, não a visibilidade**. O runtime do Go define `GOMAXPROCS` pelo número de
+núcleos visíveis, então uma porta ingênua subiria 20 threads de sistema
+disputando 0.40 CPU — queimando a cota em milissegundos e congelando o cgroup
+inteiro, exatamente como os 4 workers do experimento 04.
+
+Previsão específica e testável: **uma porta Go sem `GOMAXPROCS` ajustado teria
+cauda pior que o Django atual**, mesmo sendo muito mais rápida por requisição.
+Com `GOMAXPROCS=1` (ou `automaxprocs`), aí sim os 8-15x apareceriam.
+
+Ganho colateral: memória. O container Python usa ~54MB; um binário Go usaria
+10-20MB, liberando ~70MB por instância para o Postgres dentro do orçamento de
+550MB.
+
+### Elixir / BEAM
+
+**Previsão: ganho moderado em vazão, ganho maior em previsibilidade de cauda.**
+
+Chute: **150–400 µs por requisição** — melhor que CPython, pior que Go. A BEAM
+não é uma máquina de números rápida; a força dela é outra.
+
+O diferencial seria o **escalonamento preemptivo**: nenhuma requisição consegue
+monopolizar um scheduler, então a cauda tende a ser mais bem comportada sob
+carga irregular. Num sistema em que p99 importa mais que média, isso vale mais
+que vazão bruta.
+
+Duas ressalvas honestas. Primeira: **sob cgroup, a justiça da BEAM não ajuda** —
+quando a cota acaba, o cgroup congela *todos* os schedulers de uma vez, e não
+existe escalonamento justo dentro de um processo congelado. Segunda: a BEAM
+também sobe um scheduler por núcleo visível, ou seja, **cairia na mesma
+armadilha do Go** sem ajuste de `+S`.
+
+Ponto a favor: o pool do Ecto é explícito e limitado por configuração, o que
+combina bem com `max_connections` apertado.
+
+### Resumo das previsões
+
+| | CPU/req (chute) | vs. Django hoje | Pontuação na Rinha |
+| - | - | - | - |
+| Django + Gunicorn sync (medido) | **862 µs** | — | 100.000 |
+| FastAPI async + asyncpg | 300–500 µs | 1,7–2,9x | 100.000 |
+| Go + pgx | 50–100 µs | 8–17x | 100.000 |
+| Elixir/Phoenix | 150–400 µs | 2–6x | 100.000 |
+
+### A conclusão que mais importa
+
+**Nenhuma dessas trocas mudaria a pontuação.** A coluna da direita é a mesma em
+todas as linhas, e não por acaso: já estamos em USD 100.000, com p98 de 7ms
+contra um SLA de 250ms — **35x de folga**. Não existe nota acima do teto.
+
+O ganho seria em **teto de vazão**, não em resultado. E vale notar onde o novo
+gargalo apareceria: para sustentar 4.000 rps, o Postgres precisaria de ~8x a CPU
+que tem hoje, e não há de onde tirar dentro de 1.5 CPU. **A troca de linguagem
+moveria o gargalo da aplicação para o banco** — e aí a contenção nas 5 linhas
+quentes, que hoje é irrelevante, passaria a ser o assunto.
+
+Ou seja: a resposta à pergunta "o gargalo não seria o banco?" é **hoje não, mas
+viraria**. E o que continuaria decidindo a corretude é a estratégia de
+concorrência — o `UPDATE` atômico condicional — que não depende de linguagem
+nenhuma.
+
+---
+
+## 8. Ações decorrentes
 
 - [x] `WEB_SERVER` seleciona `gunicorn-sync`, `gunicorn-gthread` ou `uvicorn`.
 - [x] Pool de conexões do psycopg disponível via `DB_POOL=1`.
@@ -235,7 +344,7 @@ paralelismo seja inútil.
 
 ---
 
-## 8. Aprendizados transversais
+## 9. Aprendizados transversais
 
 - **Sob cota, CPU por requisição é a única métrica que importa.** Vazão é
   consequência: cota ÷ custo.
