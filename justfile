@@ -251,6 +251,23 @@ bench-02:
     done
     just bench-tabela
 
+# uma série da stack atrás do nginx (rig: nginx-unix | nginx-tcp)
+[group('bench')]
+bench-stack rig="nginx-unix" cpus="0.45" workers="1" duracao="10s" reps="5" rps="":
+    @bash {{RAIZ}}/scripts/bench-stack.sh {{rig}} {{cpus}} {{workers}} {{duracao}} {{reps}} {{rps}}
+
+# reproduz o experimento 03: socket Unix vs TCP no salto nginx->API
+[group('bench')]
+bench-03:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for rig in nginx-unix nginx-tcp; do
+        bash {{RAIZ}}/scripts/bench-stack.sh "$rig" 0.45 1 10s 5
+        bash {{RAIZ}}/scripts/bench-stack.sh "$rig" 0.45 1 10s 3 170
+        bash {{RAIZ}}/scripts/bench-stack.sh "$rig" 1.5  1 10s 5
+    done
+    just bench-tabela
+
 # imprime a tabela comparativa das séries já executadas
 [group('bench')]
 bench-tabela:

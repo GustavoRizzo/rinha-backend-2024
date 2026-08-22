@@ -3,6 +3,10 @@
 # Não é a stack da Rinha — é o degrau mais baixo dela, isolado de propósito para
 # que a diferença contra o experimento 01 seja atribuível ao container e ao
 # cgroup, e a mais nada.
+# Nome do projeto no Docker: sem isto o Compose usaria o nome do diretório
+# (`django`), genérico demais para achar entre outros projetos.
+name: rinha-backend-django
+
 services:
   api01:
     build:
