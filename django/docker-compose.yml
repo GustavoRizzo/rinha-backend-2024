@@ -34,7 +34,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.75"
+          # Rebalanceado a partir do experimento 05: o banco congelou em
+          # apenas 0,3% dos períodos com 0.75, enquanto as APIs congelavam
+          # em 3%. A cota migrou para onde a cauda estava.
+          cpus: "0.60"
           memory: "318MB"
 
   api01: &api
@@ -56,7 +59,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.30"
+          cpus: "0.40"
           memory: "100MB"
 
   api02:
@@ -83,7 +86,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.15"
+          # O nginx congelou em 0,1% dos períodos com 0.15; sobra folga.
+          cpus: "0.10"
           memory: "32MB"
 
 volumes:
