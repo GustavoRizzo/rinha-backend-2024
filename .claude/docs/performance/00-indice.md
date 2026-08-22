@@ -10,7 +10,7 @@ Cada experimento tem arquivo próprio. A convenção de escrita está descrita e
 | [03](./03-nginx-e-socket-unix.md) | nginx na frente, e o que um socket Unix vale | 2026-08-21 | **concluído** |
 | [04](./04-postgres.md) | Postgres: leitura, escrita e o custo de `CONN_MAX_AGE` | 2026-08-21 | **concluído** |
 | [05](./05-stack-completa-gatling.md) | Stack completa (2 instâncias) + Gatling: **USD 100.000, zero inconsistências** | 2026-08-21 | **concluído** |
-| 06 | Worker e protocolo: `gthread`, ASGI/uvicorn, async | — | planejado |
+| [06](./06-tipos-de-worker.md) | Tipos de worker: `sync`, `gthread`, ASGI/uvicorn | 2026-08-22 | **concluído** |
 
 ## Regras de ouro destes documentos
 

@@ -1,0 +1,122 @@
+{
+  "config": "postgres-sem-limite-uvicorn-pool-transacoes-cpu0-w1",
+  "endpoint": "transacoes",
+  "duracao": "10s",
+  "modelo_de_carga": "fechado(saturacao)",
+  "concorrencia": 50,
+  "git_commit": "6746658",
+  "git_sujo": true,
+  "ferramenta": "oha 1.15.0",
+  "host": {
+    "cpus": 20,
+    "kernel": "6.6.87.2-microsoft-standard-WSL2",
+    "python": "3.14.6"
+  },
+  "banco": "postgres",
+  "repeticoes": 5,
+  "aquecimento_descartado": true,
+  "rps": {
+    "mediana": 378.84,
+    "min": 371.92,
+    "max": 384.62,
+    "amplitude_pct": 3.35
+  },
+  "p50_ms": {
+    "mediana": 131.19,
+    "min": 129.03,
+    "max": 133.75,
+    "amplitude_pct": 3.6
+  },
+  "p99_ms": {
+    "mediana": 167.85,
+    "min": 166.02,
+    "max": 172.2,
+    "amplitude_pct": 3.68
+  },
+  "codigos": {
+    "200": 3797
+  },
+  "rps_por_repeticao": [
+    384.6,
+    371.9,
+    378.8,
+    378.3,
+    381.7
+  ],
+  "cgroup": {
+    "cpu_usado_s": {
+      "mediana": 12.7,
+      "min": 12.7,
+      "max": 12.71,
+      "amplitude_pct": 0.12
+    },
+    "cpu_us_por_request": {
+      "mediana": 3395.8,
+      "min": 3345.9,
+      "max": 3460.3,
+      "amplitude_pct": 3.37
+    },
+    "nr_throttled": {
+      "mediana": 0,
+      "min": 0,
+      "max": 0,
+      "amplitude_pct": 0.0
+    },
+    "throttled_ms": {
+      "mediana": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "amplitude_pct": 0.0
+    },
+    "nr_periods": {
+      "mediana": 0,
+      "min": 0,
+      "max": 0,
+      "amplitude_pct": 0.0
+    },
+    "pct_periodos_throttlados": {
+      "mediana": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "amplitude_pct": 0.0
+    }
+  },
+  "cgroup_nginx": {
+    "cpu_usado_s": {
+      "mediana": 0.56,
+      "min": 0.56,
+      "max": 0.56,
+      "amplitude_pct": 1.07
+    },
+    "cpu_us_por_request": {
+      "mediana": 149.9,
+      "min": 148.1,
+      "max": 152.4,
+      "amplitude_pct": 2.87
+    },
+    "nr_throttled": {
+      "mediana": 0,
+      "min": 0,
+      "max": 0,
+      "amplitude_pct": 0.0
+    },
+    "throttled_ms": {
+      "mediana": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "amplitude_pct": 0.0
+    },
+    "nr_periods": {
+      "mediana": 0,
+      "min": 0,
+      "max": 0,
+      "amplitude_pct": 0.0
+    },
+    "pct_periodos_throttlados": {
+      "mediana": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "amplitude_pct": 0.0
+    }
+  }
+}
