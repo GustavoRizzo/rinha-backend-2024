@@ -9,8 +9,10 @@ Cada experimento de performance ganha **um arquivo próprio e detalhado** em
 `.claude/docs/performance/`, nunca uma seção dentro de um documento maior. O
 índice fica em `.claude/docs/performance/00-indice.md`.
 
-Nomenclatura: `NN-assunto-curto.md`, numeração sequencial e estável (nunca
-renumerar — o número é o identificador do experimento).
+Nomenclatura: `NN-assunto-curto.md`. A numeração reflete a **ordem cronológica**
+em que os experimentos foram feitos e **pode ser renumerada** quando a ordem
+mudar — o usuário prefere que os números contem a história da evolução do
+projeto, em vez de servirem como identificador estável.
 
 Todo arquivo de experimento tem, **nesta ordem**:
 

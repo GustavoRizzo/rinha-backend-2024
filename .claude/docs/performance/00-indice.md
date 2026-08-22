@@ -7,12 +7,14 @@ Cada experimento tem arquivo próprio. A convenção de escrita está descrita e
 | - | - | - | - |
 | [01](./01-debug-vs-producao.md) | Custo do `DEBUG=True` e de `runserver` vs. Gunicorn (SQLite) | 2026-08-21 | **concluído** |
 | [02](./02-container-e-cgroup.md) | Container + cgroup (SQLite): workers sob cota, throttling | 2026-08-21 | **parcial** |
-| 03 | Adição do Postgres | — | planejado |
-| 04 | Adição do nginx e da 2ª instância | — | planejado |
-| 05 | Servidores/workers alternativos (gthread, Granian, uWSGI) | — | planejado |
+| 03 | Worker e protocolo: `sync` vs. `gthread` vs. ASGI/uvicorn | — | **próximo** |
+| 04 | Adição do Postgres | — | planejado |
+| 05 | Adição do nginx e da 2ª instância | — | planejado |
 
 ## Regras de ouro destes documentos
 
+0. **A numeração é cronológica.** Os números contam a ordem em que os
+   experimentos foram feitos, e são renumerados quando a ordem muda.
 1. **Ressalvas antes dos números.** Todo arquivo abre dizendo o que o teste
    *não* mede.
 2. **Commit registrado.** Sem o hash, o número não é replicável.

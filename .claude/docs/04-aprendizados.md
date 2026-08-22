@@ -45,6 +45,67 @@ Integration. Resultado: Engine 29.6.2, Compose v5.3.1, 20 CPUs / 31GB.
 
 ---
 
+### [2026-08-21] Esgotamento de portas efêmeras: o gargalo que não é CPU
+**Contexto**: no experimento 02, as séries com 1.5 CPU degradavam entre
+repetições e depois paravam de responder por completo — com o container vivo,
+sem OOM, usando 54MB de 150MB e **sem throttling algum**.
+
+**Observado**:
+```
+rep1 rps=781.9  connection error=0
+rep2 rps=769.6  connection error=121
+rep4 rps=636.0  connection error=256
+rep5 rps=120.9  connection error=1159   (nenhuma resposta 200)
+```
+4315 requisições fizeram o `TIME_WAIT` do host subir de 5081 para 6269.
+`/proc/sys/net/ipv4/ip_local_port_range` = `32768 60999`, ou seja ~28 mil portas.
+
+**Conclusão**: uma conexão TCP é identificada pela quádrupla
+`(IP origem, porta origem, IP destino, porta destino)`. A porta de origem é
+sorteada de uma faixa finita — as **portas efêmeras**. Ao fechar, a conexão não
+some: ela entra em **`TIME_WAIT` por ~60s**. Essa espera não é desperdício, é
+segurança — impede que um pacote atrasado da conexão antiga seja entregue a uma
+conexão nova que reusou a mesma quádrupla.
+
+Consequência aritmética: **~28.000 portas ÷ 60s ≈ 470 conexões novas por
+segundo** é o teto sustentável. Acima disso a faixa esgota e o sistema para de
+abrir conexões — parada total, com CPU ociosa.
+
+Isso só vira problema se **cada requisição abrir uma conexão nova**. E abre,
+quando o worker sync do Gunicorn faz `resp.force_close()`
+(`gunicorn/workers/sync.py:177`).
+
+**O detalhe mais instrutivo**: a 0.45 CPU o problema **não aparecia**. O
+throttling segurava a vazão em ~350 rps, abaixo do teto de ~470/s, e as portas
+se liberavam no mesmo ritmo em que eram consumidas. **O limite de CPU escondia o
+limite de rede.** Afrouxar um gargalo revelou o outro — que é como gargalos
+costumam se comportar.
+
+**Ação**: `bench-container.sh` aborta com mais de 1% de erros de conexão.
+Achado central de `performance/02-container-e-cgroup.md`.
+
+**Camadas — para não confundir HTTP com TCP**:
+
+| Camada | O que faz | Exemplos |
+| - | - | - |
+| Aplicação | o que a mensagem significa | **HTTP**/1.1, HTTP/2, HTTP/3 |
+| Transporte | entregar bytes de um ponto a outro | **TCP**, UDP, QUIC |
+| Rede | achar o caminho entre máquinas | IP |
+
+HTTP **não é** TCP: é um formato de mensagem que historicamente **viaja sobre**
+TCP. HTTP/1.1 e HTTP/2 exigem TCP. **HTTP/3 não** — roda sobre QUIC, que roda
+sobre UDP, e por isso não tem TIME_WAIT nem portas presas do mesmo jeito. Trocar
+de transporte é uma escolha real — mas não aqui: o Gatling da Rinha fala
+HTTP/1.1 sobre TCP, e quem escolhe é o cliente.
+
+**Onde a escolha existe de verdade é no salto interno.** Entre o nginx e a API
+nada obriga TCP: um **socket de domínio Unix** (`unix:/tmp/api.sock`) é um
+arquivo atendido inteiramente dentro do kernel. Sem portas, sem TIME_WAIT, sem
+handshake de três vias. Elimina esta classe de problema por construção, e é o
+que deve ser usado quando o nginx entrar.
+
+---
+
 ### [2026-08-21] Ferramentas de teste de carga: duas, com papéis diferentes
 **Contexto**: para os comparativos locais (DEBUG vs. produção, `runserver` vs.
 Gunicorn) o Gatling é ferramenta errada — ele existe para a prova final, contra a
