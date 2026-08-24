@@ -359,6 +359,18 @@ aparece em relatório técnico.
 - **"Com Postgres, mais workers vão ajudar por causa da espera de I/O."** O
   oposto: com `synchronous_commit = off` a escrita virou CPU-bound e 4 workers
   perderam 28%. Quem precisava de mais workers era o SQLite.
+- **"O custo do ORM do Django já não está sendo pago, porque o caminho quente
+  usa SQL cru."** Verdade para a escrita, falso para a leitura — e a frase foi
+  escrita sem essa distinção, na previsão de `performance/django/06`, seção 8.
+  `Cliente.extrato` faz `objects.get()` mais um queryset: **11 instâncias de
+  modelo por requisição**. Medido em `performance/fastapi/01`: a escrita ganhou
+  1,73x ao trocar para FastAPI+asyncpg (dentro do previsto), e a leitura ganhou
+  **4,00x**, muito acima da faixa prevista. A diferença entre os dois números é
+  o tamanho do ORM no endpoint que eu não olhei.
+
+**Regra derivada**: **"o caminho quente" não é um lugar só.** Uma afirmação
+verificada num endpoint não vale no outro sem verificar de novo. Este sistema
+tem dois endpoints com perfis de custo opostos.
 
 ### Ferramenta que mente em silêncio
 - **`summary.total` do `oha` é a DURAÇÃO, não a contagem de requisições.** O CPU

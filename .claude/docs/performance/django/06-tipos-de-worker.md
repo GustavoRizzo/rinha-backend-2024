@@ -313,6 +313,16 @@ paralelismo seja inútil.
 **Esta seção é especulação, não medição.** Está aqui com números explícitos para
 poder ser conferida depois — se as previsões estiverem erradas, o registro fica.
 
+> **CONFERIDO em 2026-08-24, e parcialmente errado.** A previsão do FastAPI foi
+> medida em [`fastapi/01`](../fastapi/01-fastapi-async.md). Acertou na escrita
+> (499,7 µs medidos contra 300–500 previstos; 1,73x contra 1,7–2,9x previstos) e
+> **errou na leitura: 4,00x, acima do teto previsto**. O motivo está no parágrafo
+> "o que não se ganharia tanto quanto se imagina", abaixo: a afirmação de que o
+> ORM já não está no caminho quente vale para a escrita e **não** vale para o
+> extrato, que instancia 11 objetos de modelo por requisição. O texto original
+> fica como está, propositalmente — um documento que só tem acertos não é um
+> diário.
+
 ### O que os dados já dizem sobre onde está o gargalo
 
 A pergunta natural é se trocar de linguagem adiantaria, ou se o gargalo real é o

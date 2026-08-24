@@ -83,10 +83,152 @@ BENCH_ENDPOINT=transacoes bash scripts/bench-stack.sh postgres 0.40 1 10s 5
 
 ## 4. Resultados
 
-_(preenchido ao fim das séries)_
+Todas as séries: `oha` 1.15.0, 10s por repetição, 5 repetições, aquecimento
+descartado, concorrência 50, modelo fechado (saturação), API em 0.40 CPU com 1
+worker. "ampl%" é a amplitude entre as repetições — abaixo de ~3% é ruído.
+
+### 4.1 Escrita — `POST /clientes/1/transacoes`
+
+| configuração | µs CPU/req | ampl% | rps | p50 ms | p99 ms | períodos throttlados |
+| - | - | - | - | - | - | - |
+| Django, gunicorn sync | 862,4 | 5,3 | 483,9 | 102,2 | 166,3 | 95,3% |
+| **FastAPI, validação manual** | **499,7** | 2,1 | 822,6 | 80,7 | 177,8 | 94,3% |
+| FastAPI, validação pydantic | 512,7 | 3,7 | 807,7 | 82,0 | 184,3 | 92,6% |
+
+### 4.2 Leitura — `GET /clientes/1/extrato` (10 transações no corpo)
+
+| configuração | µs CPU/req | ampl% | rps | p50 ms | p99 ms | períodos throttlados |
+| - | - | - | - | - | - | - |
+| Django, gunicorn sync | 1257,9 | 5,0 | 334,9 | 173,0 | 194,8 | 95,3% |
+| **FastAPI, 2 queries, orjson** | **314,3** | 1,8 | 1303,1 | 14,4 | 182,0 | 94,3% |
+| FastAPI, 2 queries, `json` da stdlib | 341,0 | 3,9 | 1202,4 | — | — | — |
+| FastAPI, query única, orjson | 250,7 | 1,3 | 1638,3 | 9,8 | 181,9 | 93,4% |
+
+### 4.3 As razões que interessam
+
+| comparação | fator |
+| - | - |
+| FastAPI vs. Django, **escrita** | **1,73x** |
+| FastAPI vs. Django, **leitura** | **4,00x** |
+| FastAPI query única vs. Django, leitura | 5,02x |
+| query única vs. duas queries (FastAPI) | 1,25x |
+| orjson vs. `json` da stdlib (FastAPI, leitura) | 1,09x |
+| pydantic vs. validação manual (FastAPI, escrita) | **0,97x** (pior) |
 
 ---
 
 ## 5. Conclusões
 
-_(preenchido ao fim das séries)_
+### 5.1 A previsão acertou na escrita e errou na leitura
+
+A previsão registrada em [`django/06`, seção 8](../django/06-tipos-de-worker.md),
+escrita antes de existir uma linha de código deste projeto, era **300–500 µs/req
+e um ganho de 1,7x a 2,9x**.
+
+| | previsto | medido | veredito |
+| - | - | - | - |
+| escrita | 300–500 µs | **499,7 µs** | dentro da faixa, encostado no teto |
+| escrita | 1,7–2,9x | **1,73x** | no piso do intervalo |
+| leitura | 1,7–2,9x | **4,00x** | **fora da faixa, subestimado** |
+
+**O erro não foi de calibragem, foi de raciocínio.** A previsão dizia, com todas
+as letras: *"o que não se ganharia tanto quanto se imagina: nosso caminho quente
+já usa SQL cru, então o custo do ORM do Django já não está sendo pago"*.
+
+Isso é verdade para a **escrita** — `Cliente._aplicar_delta` executa
+`connection.cursor()` com SQL cru — e falso para a **leitura**:
+`Cliente.extrato` faz `cls.objects.get(pk=...)` seguido de
+`list(cliente.transacoes.all()[:10])`, ou seja, **11 instâncias de modelo do
+Django construídas por requisição**
+(`django/crebitos/models.py`, método `extrato`).
+
+O ORM estava no caminho quente o tempo todo — só que no endpoint que eu não
+olhei quando escrevi a previsão. E a assimetria dos resultados (1,73x contra
+4,00x) é exatamente o tamanho dessa diferença.
+
+**Aprendizado transversal**: "o caminho quente" não é um lugar só. Este sistema
+tem dois endpoints com perfis de custo opostos, e uma afirmação verificada em um
+deles foi generalizada para o outro sem verificação.
+
+### 5.2 O pydantic não paga, e a hipótese registrada estava certa
+
+512,7 µs contra 499,7 µs: o pydantic ficou **2,6% pior**, o que está dentro do
+limiar de ruído de ~3% deste projeto. A leitura honesta é **"sem diferença
+mensurável"**, não "o pydantic perde".
+
+O comentário em `fastapi/app/config.py` registrava a hipótese antes da medição:
+*"para 3 campos, o custo de construir o modelo pode comer o ganho do parser"*.
+Foi o que aconteceu. O núcleo em Rust do pydantic-core ganha no parsing e
+devolve o ganho na construção do `BaseModel` — e o payload da Rinha tem três
+campos.
+
+**Decisão: a validação manual fica como padrão.** Não por ser mais rápida (não
+é, dentro do ruído), mas porque é a que espelha o Django, e trocar sem ganho
+mensurável introduziria uma variável a mais na comparação.
+
+Ressalva: isto **não** é um veredito sobre o pydantic em geral. Com payloads
+maiores, tipos aninhados ou muitos campos, a conta muda de lado — e este teste
+não diz nada sobre esse caso.
+
+### 5.3 As duas otimizações que valem, e por quê
+
+**Query única no extrato: 1,25x** (314,3 → 250,7 µs). O ganho tem duas fontes:
+um round-trip a menos e, sobretudo, as 10 transações voltando do Postgres como
+texto JSON já pronto, concatenado direto na resposta em vez de virar 10 dicts
+Python e depois bytes.
+
+**orjson: 1,09x** no extrato (314,3 → 341,0 com a stdlib). Acima do ruído, e o
+número faz sentido: o corpo do extrato tem 10 objetos, e é aí que um
+serializador em Rust tem o que fazer. No POST, cujo corpo tem dois inteiros, o
+ganho seria irrelevante — não foi medido de propósito.
+
+Somadas, as duas põem o extrato em **250,7 µs contra 1257,9 µs do Django —
+5,02x**.
+
+### 5.4 A amplitude caiu pela metade
+
+| | amplitude entre repetições |
+| - | - |
+| Django (sync) | 4,8–5,3% |
+| FastAPI (uvicorn/uvloop) | 1,3–2,1% |
+
+Mesmo rig, mesma cota, mesmo host. **Isto é uma observação, não uma explicação**
+— a causa não foi investigada. A hipótese óbvia é que um único loop de eventos
+tem escalonamento mais previsível que worker sync + kernel; confirmá-la exigiria
+um experimento próprio.
+
+### 5.5 O que NÃO mudou: a pontuação
+
+A previsão também dizia que **nenhuma dessas trocas mudaria a pontuação**, e
+isso continua valendo. A stack Django já entrega p98 de 7ms contra um SLA de
+250ms — 35x de folga — e não existe nota acima do teto de USD 100.000.
+
+O que estes números compram é **teto de vazão**: sob a mesma cota de 0.40 CPU
+por instância, o FastAPI sustenta ~1,7x mais escritas e ~4x mais leituras.
+
+### 5.6 Onde o gargalo vai aparecer agora
+
+Os períodos throttlados contam a história: a API continua congelando em **92–94%
+dos períodos**, praticamente o mesmo que o Django (95%). **A aplicação continua
+sendo o gargalo** — ela ficou mais barata por requisição, mas ainda satura sua
+cota antes de qualquer outro serviço.
+
+A previsão de que "o gargalo migraria para o Postgres" **ainda não se
+confirmou**, e não podia mesmo: com a cota da API fixa em 0.40, o teto de vazão
+subiu proporcionalmente ao barateamento, mas o banco recebeu proporcionalmente
+mais trabalho na mesma cota de 0.6. O teste que responderia isso é
+redistribuir a cota — tirar da API e dar ao banco — e ainda não foi feito.
+
+---
+
+## 6. Ações decorrentes
+
+- [x] `BENCH_PROJETO` parametriza a bancada; perfis em `scripts/perfis/`.
+- [x] Padrão do projeto: validação manual, extrato em duas queries, orjson.
+- [ ] **Promover a query única a padrão** — 1,25x, com testes provando bytes
+      idênticos. Falta rodar a prova oficial com ela ligada.
+- [ ] Prova oficial (Gatling) da stack completa em FastAPI.
+- [ ] Redistribuir a cota (API ↔ banco) agora que a API ficou mais barata:
+      é o experimento que responde se o gargalo migrou.
+- [ ] Corrigir a generalização em `django/06`, seção 8: o custo do ORM **estava**
+      no caminho quente de leitura.
