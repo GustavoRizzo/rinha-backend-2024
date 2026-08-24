@@ -43,7 +43,12 @@ def main() -> None:
         "variante": slug,
         "timestamp": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
         "git_commit": cmd("git", "rev-parse", "--short", "HEAD"),
-        "git_sujo": bool(cmd("git", "status", "--porcelain")),
+        # MESMO critério do aborto em rodar-carga.sh: `resultados/` de fora,
+        # porque são saídas versionadas — a execução anterior não suja a árvore
+        # para a seguinte.
+        "git_sujo": bool(
+            cmd("git", "status", "--porcelain", "--", ".", ":(exclude)resultados")
+        ),
         "segundos_ate_pronta": int(segundos_ate_pronta),
         "recursos": recursos,
         "gatling": "3.15.1",

@@ -40,9 +40,6 @@ SERVIDOR="${BENCH_SERVER:-$([[ "$PROJETO" == "django" ]] && echo gunicorn-sync |
 THREADS="${BENCH_THREADS:-4}"
 API="$PERFIL_API"
 LB="$PERFIL_LB"
-# Definido pelo perfil apenas nos rigs com banco. Vazio => não coletamos o
-# terceiro cgroup, e o JSON simplesmente não traz o bloco.
-DB="${PERFIL_DB:-}"
 PORTA="${LB_PORTA:-9999}"
 CONCORRENCIA="${BENCH_CONCORRENCIA:-50}"
 
@@ -57,6 +54,16 @@ fi
 compose_args=()
 if ! perfil_rig "$rig"; then
     echo "ABORTADO: rig '$rig' não existe no projeto '$PROJETO'." >&2
+    exit 1
+fi
+
+# Depois de `perfil_rig`, não antes: é ele que define PERFIL_DB, e ler a
+# variável cedo demais devolvia vazio em silêncio — o JSON saía sem o bloco do
+# banco e a tabela imprimia travessão como se o rig não tivesse banco.
+DB="${PERFIL_DB:-}"
+if [[ "${BENCH_BANCO:-}" == "postgres" && -z "$DB" ]]; then
+    echo "ABORTADO: rig '$rig' usa Postgres mas o perfil não declarou PERFIL_DB." >&2
+    echo "Sem o cgroup do banco não dá para dizer quem é o gargalo." >&2
     exit 1
 fi
 

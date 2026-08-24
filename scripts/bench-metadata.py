@@ -32,7 +32,13 @@ def main() -> None:
         "concorrencia": int(concorrencia),
         "timestamp": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
         "git_commit": cmd("git", "rev-parse", "--short", "HEAD") or "(sem commit)",
-        "git_sujo": bool(cmd("git", "status", "--porcelain")),
+        # MESMO critério do aborto em bench-stack.sh: `resultados/` de fora,
+        # porque são saídas versionadas. Sem a exclusão, a primeira série de uma
+        # varredura sujava a árvore para as seguintes, e todas saíam marcadas
+        # como suspeitas sem nada ter mudado no código medido.
+        "git_sujo": bool(
+            cmd("git", "status", "--porcelain", "--", ".", ":(exclude)resultados")
+        ),
         "ferramenta": cmd("oha", "--version"),
         "host": {
             "cpus": os.cpu_count(),
