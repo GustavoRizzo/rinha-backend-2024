@@ -42,7 +42,7 @@ perfil_rig() {
 
 # Repõe o histórico entre repetições de um bench de ESCRITA.
 perfil_resetar() {
-    docker exec "$PERFIL_API" python manage.py preparar_bench
+    docker exec "$API" python manage.py preparar_bench
 }
 
 # Sufixo do slug que identifica o servidor HTTP e suas opções. Sem ele, uma

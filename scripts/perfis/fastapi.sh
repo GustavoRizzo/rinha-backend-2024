@@ -15,6 +15,17 @@ perfil_rig() {
     local base_pg="$RAIZ/fastapi/compose.bench-postgres.yml"
 
     case "$rig" in
+        # A stack da COMPETIÇÃO: nginx + 2 APIs + banco, somando 1.5 CPU e
+        # 550MB. É o único rig em que a repartição da cota é uma pergunta
+        # legítima, porque é o único que precisa caber no orçamento. Os demais
+        # são instrumentos de diagnóstico e passam do limite de propósito.
+        producao)
+            compose_args=(-f "$RAIZ/fastapi/docker-compose.yml")
+            export BENCH_BANCO=postgres
+            PERFIL_API="rinha-backend-fastapi-api01-1 rinha-backend-fastapi-api02-1"
+            PERFIL_LB=rinha-backend-fastapi-nginx-1
+            PERFIL_DB=rinha-backend-fastapi-db-1
+            PERFIL_ORCAMENTO=1 ;;
         postgres) compose_args=(-f "$base_pg"); export BENCH_BANCO=postgres
                   PERFIL_DB=rinha-bench-fa-db ;;
         postgres-sem-limite)
@@ -26,7 +37,7 @@ perfil_rig() {
 }
 
 perfil_resetar() {
-    docker exec "$PERFIL_API" python -m app.preparar_bench
+    docker exec "$API" python -m app.preparar_bench
 }
 
 # As variantes deste projeto são de aplicação, não de servidor: `uvicorn` é o

@@ -38,8 +38,6 @@ ENDPOINT="${BENCH_ENDPOINT:-extrato}"
 # sync (`django/06`), e o FastAPI não tem WSGI para servir.
 SERVIDOR="${BENCH_SERVER:-$([[ "$PROJETO" == "django" ]] && echo gunicorn-sync || echo uvicorn)}"
 THREADS="${BENCH_THREADS:-4}"
-API="$PERFIL_API"
-LB="$PERFIL_LB"
 PORTA="${LB_PORTA:-9999}"
 CONCORRENCIA="${BENCH_CONCORRENCIA:-50}"
 
@@ -57,14 +55,37 @@ if ! perfil_rig "$rig"; then
     exit 1
 fi
 
-# Depois de `perfil_rig`, não antes: é ele que define PERFIL_DB, e ler a
-# variável cedo demais devolvia vazio em silêncio — o JSON saía sem o bloco do
-# banco e a tabela imprimia travessão como se o rig não tivesse banco.
+# TUDO isto é lido depois de `perfil_rig`, e nunca antes: é ele que define os
+# nomes dos containers, e cada rig usa os seus. Ler cedo demais foi um bug real
+# — o bloco do banco sumia do resultado em silêncio, e a tabela imprimia
+# travessão como se o rig não tivesse banco.
+#
+# Lista, não nome único: o rig da stack de produção tem DUAS instâncias, e o
+# custo por requisição só faz sentido somando os dois cgroups — cada requisição
+# cai numa delas, e o total gasto é o que a cota do orçamento paga.
+read -r -a APIS <<< "$PERFIL_API"
+# Primeira instância: é nela que `perfil_resetar` executa o comando que replanta
+# o estado. O banco é compartilhado, então uma só basta.
+export API="${APIS[0]}"
+LB="$PERFIL_LB"
 DB="${PERFIL_DB:-}"
 if [[ "${BENCH_BANCO:-}" == "postgres" && -z "$DB" ]]; then
     echo "ABORTADO: rig '$rig' usa Postgres mas o perfil não declarou PERFIL_DB." >&2
     echo "Sem o cgroup do banco não dá para dizer quem é o gargalo." >&2
     exit 1
+fi
+
+# Rigs marcados como "orçamento da competição" precisam fechar em 1.5 CPU e
+# 550MB. Sem esta trava, uma repartição inválida produziria um número ótimo e
+# ilegal — e um número ilegal contamina a comparação inteira, porque não dá
+# para saber depois qual linha da tabela podia existir.
+if [[ "${PERFIL_ORCAMENTO:-0}" == "1" ]]; then
+    export API_CPUS="$cpus" DB_CPUS="${DB_CPUS:-0.60}" LB_CPUS="${LB_CPUS:-0.10}"
+    if ! bash "$RAIZ/scripts/check-limites.sh" "${compose_args[@]}" >/dev/null; then
+        echo "ABORTADO: a repartição estoura o orçamento da Rinha." >&2
+        bash "$RAIZ/scripts/check-limites.sh" "${compose_args[@]}" >&2 || true
+        exit 1
+    fi
 fi
 
 export API_CPUS="$cpus" API_WORKERS="$workers" LB_PORTA="$PORTA"
@@ -82,7 +103,19 @@ for _ in $(seq 1 80); do
     sleep 0.5
 done
 
-stat_de() { docker exec "$1" awk -v k="$2" '$1==k{print $2}' /sys/fs/cgroup/cpu.stat; }
+# Soma a métrica em todos os containers passados. Com um só, é a leitura
+# direta; com dois, é a soma — que é o número certo para uma stack de duas
+# instâncias sob um orçamento único.
+stat_de() {
+    local chave="$1"; shift
+    local total=0 valor
+    for container in "$@"; do
+        valor=$(docker exec "$container" awk -v k="$chave" '$1==k{print $2}' /sys/fs/cgroup/cpu.stat)
+        [[ -n "$valor" ]] || { echo "ABORTADO: cpu.stat sem '$chave' em $container." >&2; exit 1; }
+        total=$(( total + valor ))
+    done
+    printf '%s' "$total"
+}
 
 case "$ENDPOINT" in
     extrato)
@@ -119,6 +152,15 @@ config="${prefixo_projeto}${rig}-${sufixo_servidor}-${ENDPOINT}-cpu${cpus}-w${wo
 # sobrescreve — em silêncio — o arquivo que sustenta um documento já escrito.
 [[ -n "${BENCH_TAG:-}" ]] && config="${config}-${BENCH_TAG}"
 
+# Antes do aquecimento, e para QUALQUER endpoint: o extrato precisa de
+# histórico para não medir a serialização de uma lista vazia, e o rig da stack
+# de produção não tem BENCH_SEED no compose — nem deveria ter, é a stack da
+# competição.
+if ! perfil_resetar >/dev/null 2>&1; then
+    echo "ABORTADO: não consegui plantar o estado inicial do benchmark." >&2
+    exit 1
+fi
+
 echo "[$config] aquecimento (descartado)..." >&2
 oha -z "$duracao" -c "$CONCORRENCIA" --no-tui --output-format quiet \
     "${taxa[@]}" "${alvo[@]}" >/dev/null 2>&1
@@ -137,13 +179,13 @@ for i in $(seq 1 "$reps"); do
         fi
     fi
 
-    a_uso=$(stat_de "$API" usage_usec);  a_thr=$(stat_de "$API" nr_throttled)
-    a_thu=$(stat_de "$API" throttled_usec); a_per=$(stat_de "$API" nr_periods)
-    n_uso=$(stat_de "$LB" usage_usec);   n_thr=$(stat_de "$LB" nr_throttled)
-    n_thu=$(stat_de "$LB" throttled_usec);  n_per=$(stat_de "$LB" nr_periods)
+    a_uso=$(stat_de usage_usec "${APIS[@]}");  a_thr=$(stat_de nr_throttled "${APIS[@]}")
+    a_thu=$(stat_de throttled_usec "${APIS[@]}"); a_per=$(stat_de nr_periods "${APIS[@]}")
+    n_uso=$(stat_de usage_usec "$LB");   n_thr=$(stat_de nr_throttled "$LB")
+    n_thu=$(stat_de throttled_usec "$LB");  n_per=$(stat_de nr_periods "$LB")
     if [[ -n "$DB" ]]; then
-        d_uso=$(stat_de "$DB" usage_usec);   d_thr=$(stat_de "$DB" nr_throttled)
-        d_thu=$(stat_de "$DB" throttled_usec); d_per=$(stat_de "$DB" nr_periods)
+        d_uso=$(stat_de usage_usec "$DB");   d_thr=$(stat_de nr_throttled "$DB")
+        d_thu=$(stat_de throttled_usec "$DB"); d_per=$(stat_de nr_periods "$DB")
     fi
 
     saida=$(oha -z "$duracao" -c "$CONCORRENCIA" --no-tui --output-format json \
@@ -158,21 +200,21 @@ for i in $(seq 1 "$reps"); do
 
     args_cgroup=(
         "$total"
-        "$(( $(stat_de "$API" usage_usec)     - a_uso ))"
-        "$(( $(stat_de "$API" nr_throttled)   - a_thr ))"
-        "$(( $(stat_de "$API" throttled_usec) - a_thu ))"
-        "$(( $(stat_de "$API" nr_periods)     - a_per ))"
-        "$(( $(stat_de "$LB" usage_usec)      - n_uso ))"
-        "$(( $(stat_de "$LB" nr_throttled)    - n_thr ))"
-        "$(( $(stat_de "$LB" throttled_usec)  - n_thu ))"
-        "$(( $(stat_de "$LB" nr_periods)      - n_per ))"
+        "$(( $(stat_de usage_usec "${APIS[@]}")     - a_uso ))"
+        "$(( $(stat_de nr_throttled "${APIS[@]}")   - a_thr ))"
+        "$(( $(stat_de throttled_usec "${APIS[@]}") - a_thu ))"
+        "$(( $(stat_de nr_periods "${APIS[@]}")     - a_per ))"
+        "$(( $(stat_de usage_usec "$LB")      - n_uso ))"
+        "$(( $(stat_de nr_throttled "$LB")    - n_thr ))"
+        "$(( $(stat_de throttled_usec "$LB")  - n_thu ))"
+        "$(( $(stat_de nr_periods "$LB")      - n_per ))"
     )
     if [[ -n "$DB" ]]; then
         args_cgroup+=(
-            "$(( $(stat_de "$DB" usage_usec)     - d_uso ))"
-            "$(( $(stat_de "$DB" nr_throttled)   - d_thr ))"
-            "$(( $(stat_de "$DB" throttled_usec) - d_thu ))"
-            "$(( $(stat_de "$DB" nr_periods)     - d_per ))"
+            "$(( $(stat_de usage_usec "$DB")     - d_uso ))"
+            "$(( $(stat_de nr_throttled "$DB")   - d_thr ))"
+            "$(( $(stat_de throttled_usec "$DB") - d_thu ))"
+            "$(( $(stat_de nr_periods "$DB")     - d_per ))"
         )
     fi
     extra=$(python3 "$RAIZ/scripts/bench-cgroup.py" "${args_cgroup[@]}")

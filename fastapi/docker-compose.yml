@@ -40,7 +40,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.60"
+          # Parametrizado para o experimento 02, que compara REPARTIÇÕES do
+          # orçamento. Os padrões são a distribuição herdada dos experimentos do
+          # Django, e sem nenhuma variável definida a soma é exatamente
+          # 1.50 CPU / 550MB — confira com `just check fastapi`.
+          cpus: "${DB_CPUS:-0.60}"
           memory: "318MB"
 
   api01: &api
@@ -71,7 +75,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.40"
+          cpus: "${API_CPUS:-0.40}"
           memory: "100MB"
 
   api02:
@@ -101,7 +105,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.10"
+          cpus: "${LB_CPUS:-0.10}"
           memory: "32MB"
 
 volumes:
