@@ -17,19 +17,26 @@ de recursos.
 
 ## Estado atual
 
-**Os seis experimentos estão concluídos.** A stack passa na prova oficial com
-pontuação máxima.
+**Duas implementações, sete experimentos, as duas passando na prova oficial com
+pontuação máxima.**
 
 - [x] Documentação base (docs 01 a 05) e diário de aprendizados
-- [x] Modelo de domínio, endpoints e 64 testes automatizados
+- [x] Modelo de domínio, endpoints e 114 testes automatizados (64 no Django,
+      50 no FastAPI)
 - [x] Stack completa: nginx + 2 APIs Django/Gunicorn + Postgres, em 1.50 CPU e 550MB
 - [x] Ferramental: `oha` 1.15.0 (comparativos rápidos) e Gatling 3.15.1 (prova oficial)
 - [x] Scripts de ciclo, bancada, pontuação e validação de limites
 - [x] 9 execuções da simulação oficial: **USD 100.000 e zero inconsistências**
-- [x] Seis documentos de experimento em [`performance/`](./performance/00-indice.md)
+- [x] Seis documentos de experimento em [`performance/django/`](./performance/django/00-indice.md)
+- [x] Segunda implementação em FastAPI + uvicorn + asyncpg, com bancada
+      parametrizada por projeto e o experimento
+      [`performance/fastapi/01`](./performance/fastapi/01-fastapi-async.md)
 
-Resultado da configuração final: **100% das requisições abaixo de 250ms**, p98
-de 7ms contra um SLA de 250ms, subida em ~20s contra um limite de 40s.
+Resultado da configuração final em Django: **100% das requisições abaixo de
+250ms**, p98 de 7ms contra um SLA de 250ms, subida em ~20s contra um limite de
+40s. O FastAPI repete a pontuação com p98 de 5ms, e custa **1,73x menos CPU na
+escrita e 4,00x menos na leitura** — diferença que a pontuação, saturada, não
+enxerga.
 
 ### O que ficou em aberto
 
@@ -37,8 +44,15 @@ de 7ms contra um SLA de 250ms, subida em ~20s contra um limite de 40s.
 - Variante com as 10 últimas transações em `JSONB` (hack M5, não implementada)
 - `synchronous_commit` como variável medida, não como decisão
 - bridge vs. host no Docker: impossível no Docker Desktop
-- Outras linguagens/frameworks — previsões registradas em
-  [`performance/django/06`](./performance/django/06-tipos-de-worker.md), seção 8
+- Go e Elixir — previsões registradas em
+  [`performance/django/06`](./performance/django/06-tipos-de-worker.md), seção 8.
+  A do FastAPI já foi conferida em
+  [`performance/fastapi/01`](./performance/fastapi/01-fastapi-async.md): certa na
+  escrita, subestimada na leitura
+- Redistribuir a cota entre API e banco agora que a API ficou mais barata — é o
+  teste que responde se o gargalo migrou para o Postgres
+- Promover a query única do extrato a padrão do FastAPI (1,25x, já com testes
+  provando bytes idênticos)
 
 ## Referência rápida
 

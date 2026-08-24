@@ -197,7 +197,37 @@ Mesmo rig, mesma cota, mesmo host. **Isto é uma observação, não uma explica�
 tem escalonamento mais previsível que worker sync + kernel; confirmá-la exigiria
 um experimento próprio.
 
-### 5.5 O que NÃO mudou: a pontuação
+### 5.5 Prova oficial: USD 100.000, e o que ela não diz
+
+Stack completa (nginx + 2 APIs + Postgres, 1.50 CPU e 550MB), simulação oficial
+do Gatling 3.15.1, 61.503 requisições em 4 minutos:
+
+| | FastAPI | Django (`django/05`) |
+| - | - | - |
+| Pontuação | **USD 100.000** | USD 100.000 |
+| Requisições abaixo de 250ms | **100%** (61.503/61.503) | 100% |
+| Inconsistências de saldo | **zero** | zero |
+| Requisições com falha | zero | zero |
+| p50 | 2 ms | — |
+| p98 | **5 ms** | 7 ms |
+| p99 | 6 ms | — |
+| máximo | 246 ms | — |
+| Subida da stack | 7s (limite: 40s) | ~20s |
+
+Resultado em `resultados/fastapi/20260824T144338/`.
+
+**O que este número NÃO prova.** Que o FastAPI é melhor. A pontuação satura: as
+duas implementações marcam o teto porque **as duas têm ~35x a 50x de folga** no
+SLA. A diferença entre p98 de 5ms e de 7ms é irrelevante contra um limite de
+250ms — está no ruído de um sistema que nem chegou perto de ser exigido. Foi
+exatamente por isso que este projeto adotou o `oha` para comparar e o Gatling
+para aprovar.
+
+O que a prova oficial diz, e é o que se pediu dela: a implementação está
+**correta** sob a carga real, incluindo as fases de concorrência e de
+read-your-writes.
+
+### 5.6 O que NÃO mudou: a pontuação
 
 A previsão também dizia que **nenhuma dessas trocas mudaria a pontuação**, e
 isso continua valendo. A stack Django já entrega p98 de 7ms contra um SLA de
@@ -206,7 +236,7 @@ isso continua valendo. A stack Django já entrega p98 de 7ms contra um SLA de
 O que estes números compram é **teto de vazão**: sob a mesma cota de 0.40 CPU
 por instância, o FastAPI sustenta ~1,7x mais escritas e ~4x mais leituras.
 
-### 5.6 Onde o gargalo vai aparecer agora
+### 5.7 Onde o gargalo vai aparecer agora
 
 Os períodos throttlados contam a história: a API continua congelando em **92–94%
 dos períodos**, praticamente o mesmo que o Django (95%). **A aplicação continua
@@ -227,7 +257,8 @@ redistribuir a cota — tirar da API e dar ao banco — e ainda não foi feito.
 - [x] Padrão do projeto: validação manual, extrato em duas queries, orjson.
 - [ ] **Promover a query única a padrão** — 1,25x, com testes provando bytes
       idênticos. Falta rodar a prova oficial com ela ligada.
-- [ ] Prova oficial (Gatling) da stack completa em FastAPI.
+- [x] Prova oficial (Gatling) da stack completa: USD 100.000, zero
+      inconsistências, p98 de 5ms, subida em 7s.
 - [ ] Redistribuir a cota (API ↔ banco) agora que a API ficou mais barata:
       é o experimento que responde se o gargalo migrou.
 - [ ] Corrigir a generalização em `django/06`, seção 8: o custo do ORM **estava**
