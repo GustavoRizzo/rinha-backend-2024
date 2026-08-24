@@ -368,6 +368,16 @@ aparece em relatório técnico.
   **4,00x**, muito acima da faixa prevista. A diferença entre os dois números é
   o tamanho do ORM no endpoint que eu não olhei.
 
+- **"O nginx virou o gargalo da leitura."** Afirmado a partir de 87–93% de
+  períodos congelados no cgroup dele. Soltar a cota de 0.15 para 0.40 rendeu
+  2,6% — dentro do ruído. Ele saturava a própria cota sem ser o limite do
+  sistema. Medido em `performance/fastapi/02`.
+
+**Regra derivada**: **throttling alto não prova gargalo.** A porcentagem de
+períodos congelados diz que um serviço satura a *sua* cota, não que ele seja a
+parede. A prova é operacional: solte a cota daquele serviço e veja se a vazão
+sobe. Se não subir, ele não era o gargalo.
+
 **Regra derivada**: **"o caminho quente" não é um lugar só.** Uma afirmação
 verificada num endpoint não vale no outro sem verificar de novo. Este sistema
 tem dois endpoints com perfis de custo opostos.

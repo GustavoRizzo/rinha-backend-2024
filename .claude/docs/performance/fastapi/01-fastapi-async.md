@@ -244,10 +244,11 @@ sendo o gargalo** — ela ficou mais barata por requisição, mas ainda satura s
 cota antes de qualquer outro serviço.
 
 A previsão de que "o gargalo migraria para o Postgres" **ainda não se
-confirmou**, e não podia mesmo: com a cota da API fixa em 0.40, o teto de vazão
-subiu proporcionalmente ao barateamento, mas o banco recebeu proporcionalmente
-mais trabalho na mesma cota de 0.6. O teste que responderia isso é
-redistribuir a cota — tirar da API e dar ao banco — e ainda não foi feito.
+confirmou** *nesta cota*: com a API fixa em 0.40, ela satura antes de qualquer
+outro serviço. O teste que responde de verdade é redistribuir a cota, e foi
+feito em [`02`](./02-onde-esta-o-gargalo.md): **o gargalo migrou mesmo para o
+banco**, e basta a API ter 0.80 para isso ficar visível. Dentro do orçamento da
+competição, mover 0.20 CPU das APIs para o banco rende 1,54x na escrita.
 
 ---
 
@@ -255,11 +256,12 @@ redistribuir a cota — tirar da API e dar ao banco — e ainda não foi feito.
 
 - [x] `BENCH_PROJETO` parametriza a bancada; perfis em `scripts/perfis/`.
 - [x] Padrão do projeto: validação manual, extrato em duas queries, orjson.
-- [ ] **Promover a query única a padrão** — 1,25x, com testes provando bytes
-      idênticos. Falta rodar a prova oficial com ela ligada.
+- [x] **Query única promovida a padrão** — 1,25x, com testes provando bytes
+      idênticos.
 - [x] Prova oficial (Gatling) da stack completa: USD 100.000, zero
       inconsistências, p98 de 5ms, subida em 7s.
-- [ ] Redistribuir a cota (API ↔ banco) agora que a API ficou mais barata:
-      é o experimento que responde se o gargalo migrou.
+- [x] Redistribuir a cota (API ↔ banco): feito em
+      [`02`](./02-onde-esta-o-gargalo.md). O gargalo **migrou** — dentro do
+      orçamento, mover 0.20 CPU das APIs para o banco rende 1,54x na escrita.
 - [ ] Corrigir a generalização em `django/06`, seção 8: o custo do ORM **estava**
       no caminho quente de leitura.

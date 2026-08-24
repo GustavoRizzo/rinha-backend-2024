@@ -6,6 +6,7 @@ o experimento 01 do FastAPI **não** é continuação do 06 do Django.
 | # | Experimento | Data | Estado |
 | - | - | - | - |
 | [01](./01-fastapi-async.md) | FastAPI + asyncpg: async de ponta a ponta — **1,73x na escrita, 4,00x na leitura**; USD 100.000 | 2026-08-24 | **concluído** |
+| [02](./02-onde-esta-o-gargalo.md) | Onde está o gargalo, e como repartir 1.5 CPU — **1,54x só redistribuindo a cota** | 2026-08-24 | **concluído** |
 
 ## Por que este projeto existe
 
