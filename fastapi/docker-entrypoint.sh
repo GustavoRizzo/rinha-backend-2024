@@ -12,6 +12,12 @@
 # morrer em toda derrubada.
 set -e
 
+# Só no rig de benchmark: planta histórico para o extrato não medir lista vazia.
+# O estado resultante é idêntico ao do `manage.py preparar_bench` do Django.
+if [ "${BENCH_SEED:-0}" = "1" ]; then
+    python -m app.preparar_bench
+fi
+
 # O socket precisa ser acessível ao nginx, que roda com outro usuário. O uvicorn
 # não tem opção de umask (o gunicorn tem: --umask), então definimos no shell e
 # ele herda.

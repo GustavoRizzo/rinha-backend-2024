@@ -9,6 +9,11 @@
 #   rig: nginx-unix | nginx-tcp | postgres | postgres-sem-persistencia
 #        | postgres-sem-limite   (remove as cotas de CPU/memória)
 #
+# BENCH_PROJETO=django|fastapi escolhe o projeto medido. O que muda de projeto
+# para projeto — rigs disponíveis, arquivos de compose, nomes de container e
+# como o estado é reposto — vive em `scripts/perfis/<projeto>.sh`. Tudo o mais
+# é igual aqui, e é isso que torna as séries comparáveis entre projetos.
+#
 # BENCH_SERVER=gunicorn-sync|gunicorn-gthread|uvicorn escolhe o servidor HTTP.
 # BENCH_THREADS=N define o tamanho do pool do gthread.
 # BENCH_POOL=1 liga o pool de conexões do psycopg (necessário no ASGI).
@@ -19,13 +24,22 @@
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BASE_SQLITE="$RAIZ/django/compose.bench-nginx.yml"
-BASE_PG="$RAIZ/django/compose.bench-postgres.yml"
+PROJETO="${BENCH_PROJETO:-django}"
+PERFIL="$RAIZ/scripts/perfis/${PROJETO}.sh"
+if [[ ! -f "$PERFIL" ]]; then
+    echo "ABORTADO: projeto '$PROJETO' não tem perfil de bancada ($PERFIL)." >&2
+    exit 1
+fi
+# shellcheck source=/dev/null
+source "$PERFIL"
+
 ENDPOINT="${BENCH_ENDPOINT:-extrato}"
-SERVIDOR="${BENCH_SERVER:-gunicorn-sync}"
+# O servidor padrão é do PROJETO, não do script: o Django ganhou com gunicorn
+# sync (`django/06`), e o FastAPI não tem WSGI para servir.
+SERVIDOR="${BENCH_SERVER:-$([[ "$PROJETO" == "django" ]] && echo gunicorn-sync || echo uvicorn)}"
 THREADS="${BENCH_THREADS:-4}"
-API=rinha-bench-api01
-LB=rinha-bench-nginx
+API="$PERFIL_API"
+LB="$PERFIL_LB"
 PORTA="${LB_PORTA:-9999}"
 CONCORRENCIA="${BENCH_CONCORRENCIA:-50}"
 
@@ -37,23 +51,14 @@ if [[ -n "$(git -C "$RAIZ" status --porcelain -- . ':(exclude)resultados' 2>/dev
     exit 1
 fi
 
-case "$rig" in
-    nginx-unix) compose_args=(-f "$BASE_SQLITE") ;;
-    nginx-tcp)  compose_args=(-f "$BASE_SQLITE" -f "$RAIZ/django/compose.bench-nginx-tcp.yml") ;;
-    postgres)   compose_args=(-f "$BASE_PG"); export BENCH_BANCO=postgres ;;
-    postgres-sem-limite)
-        compose_args=(-f "$BASE_PG" -f "$RAIZ/django/compose.bench-sem-limite.yml")
-        export BENCH_BANCO=postgres ;;
-    # Mede o custo de abrir uma conexão nova a cada requisição (CONN_MAX_AGE=0,
-    # que é o PADRÃO do Django).
-    postgres-sem-persistencia)
-        compose_args=(-f "$BASE_PG"); export DB_PERSISTENTE=0 BENCH_BANCO=postgres ;;
-    *) echo "rig desconhecido: $rig" >&2; exit 1 ;;
-esac
+compose_args=()
+if ! perfil_rig "$rig"; then
+    echo "ABORTADO: rig '$rig' não existe no projeto '$PROJETO'." >&2
+    exit 1
+fi
 
 export API_CPUS="$cpus" API_WORKERS="$workers" LB_PORTA="$PORTA"
 export API_SERVER="$SERVIDOR" API_THREADS="$THREADS"
-export DB_POOL="${BENCH_POOL:-0}"
 # stderr preservado: com `2>&1 >/dev/null`, uma falha de subida derrubava o
 # script em silêncio por causa do `set -e`, sem dizer o motivo.
 if ! docker compose "${compose_args[@]}" up -d --build >/dev/null; then
@@ -90,11 +95,14 @@ fi
 
 # O nome do servidor entra no slug: sem isso uma série de gthread
 # sobrescreveria a de sync na mesma cota.
-sufixo_servidor="$SERVIDOR"
-[[ "$SERVIDOR" == "gunicorn-gthread" ]] && sufixo_servidor="gthread${THREADS}t"
-[[ "$SERVIDOR" == "gunicorn-sync" ]] && sufixo_servidor="sync"
-[[ "${BENCH_POOL:-0}" == "1" ]] && sufixo_servidor="${sufixo_servidor}-pool"
-config="${rig}-${sufixo_servidor}-${ENDPOINT}-cpu${cpus}-w${workers}"
+sufixo_servidor="$(perfil_sufixo_servidor)"
+# O projeto entra no slug, senão uma série do FastAPI sobrescreveria a do Django
+# no mesmo rig e na mesma cota — e o arquivo antigo seria perdido em silêncio.
+# `django` fica de fora por compatibilidade: os slugs já publicados nos
+# documentos de `performance/django/` continuam válidos.
+prefixo_projeto=""
+[[ "$PROJETO" != "django" ]] && prefixo_projeto="${PROJETO}-"
+config="${prefixo_projeto}${rig}-${sufixo_servidor}-${ENDPOINT}-cpu${cpus}-w${workers}"
 [[ -n "$rps" ]] && config="${config}-${rps}rps"
 
 echo "[$config] aquecimento (descartado)..." >&2
@@ -107,7 +115,12 @@ for i in $(seq 1 "$reps"); do
     # partir dali tudo vira 422 — que responde rápido e infla o rps com
     # respostas falsas. Toda repetição parte do mesmo ponto.
     if [[ "$ENDPOINT" == "transacoes" ]]; then
-        docker exec "$API" python manage.py preparar_bench >/dev/null 2>&1
+        if ! perfil_resetar >/dev/null 2>&1; then
+            echo "ABORTADO: não consegui repor o estado entre repetições." >&2
+            echo "Sem isso o saldo desce até o limite e tudo vira 422 — que" >&2
+            echo "responde rápido e infla o rps com respostas falsas." >&2
+            exit 1
+        fi
     fi
 
     a_uso=$(stat_de "$API" usage_usec);  a_thr=$(stat_de "$API" nr_throttled)

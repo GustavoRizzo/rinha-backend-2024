@@ -364,6 +364,36 @@ bench-06:
     done
     just bench-tabela
 
+# uma série do FastAPI atrás do nginx (variantes por variável de ambiente)
+[group('bench')]
+bench-fa endpoint="transacoes" cpus="0.40" duracao="10s" reps="5":
+    @BENCH_PROJETO=fastapi BENCH_ENDPOINT={{endpoint}} \
+        bash {{RAIZ}}/scripts/bench-stack.sh postgres {{cpus}} 1 {{duracao}} {{reps}}
+
+# reproduz o experimento fastapi/01: linha de base contra o Django e as variantes
+[group('bench')]
+bench-fa-01:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export BENCH_PROJETO=fastapi
+    # Linha de base: a configuração que espelha o Django o mais de perto
+    # possível (validação à mão, extrato em duas queries, orjson).
+    for e in transacoes extrato; do
+        BENCH_ENDPOINT=$e bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+    done
+    # Uma variante por vez, sempre contra a mesma linha de base.
+    VALIDACAO=pydantic BENCH_ENDPOINT=transacoes \
+        bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+    EXTRATO_QUERY=unica BENCH_ENDPOINT=extrato \
+        bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+    SERIALIZACAO=stdlib BENCH_ENDPOINT=extrato \
+        bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+    # Sem cota: quanto a restrição está custando, e o que a aplicação entrega
+    # solta. Comparável com a série equivalente do Django no experimento 06.
+    BENCH_ENDPOINT=transacoes \
+        bash {{RAIZ}}/scripts/bench-stack.sh postgres-sem-limite 0 1 10s 5
+    just bench-tabela
+
 # imprime a tabela comparativa das séries já executadas
 [group('bench')]
 bench-tabela:
