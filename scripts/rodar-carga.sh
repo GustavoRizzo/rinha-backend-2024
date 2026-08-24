@@ -4,13 +4,29 @@
 # Sempre RECRIA a stack antes de rodar. A simulação verifica consistência de
 # saldo, e um banco com estado residual de uma execução anterior faz a
 # verificação acusar inconsistência que não existe.
+#
+# Uso: rodar-carga.sh <slug> -f <compose.yml> [-f <override.yml> ...]
+#
+# Os arquivos de compose são OBRIGATÓRIOS e vêm de quem chama (o justfile, via
+# `just _compose`). Já foram um padrão apontando para o Django, e o resultado
+# foi `just run fastapi` subir a stack do Django para medir: o slug dizia
+# fastapi e o compose dizia django. Só não virou um número errado porque as duas
+# stacks colidiram na porta 9999.
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-COMPOSE="${COMPOSE_ARQUIVO:-$RAIZ/django/docker-compose.yml}"
-SLUG="${1:-django}"
-# Repassados ao compose: permitem rodar a prova oficial com cada servidor.
-export API_SERVER="${API_SERVER:-gunicorn-sync}" API_THREADS="${API_THREADS:-4}" DB_POOL="${DB_POOL:-0}"
+SLUG="${1:-}"
+shift || true
+compose_args=("$@")
+
+if [[ -z "$SLUG" || ${#compose_args[@]} -eq 0 ]]; then
+    echo "uso: rodar-carga.sh <slug> -f <compose.yml> [-f <override.yml> ...]" >&2
+    exit 1
+fi
+
+# Repassados ao compose apenas se quem chama os definiu: cada projeto tem o seu
+# padrão, declarado no próprio compose. Um default aqui seria o mesmo erro de
+# novo — API_SERVER=gunicorn-sync num projeto ASGI não é um padrão, é um bug.
 SIMULACAO=RinhaBackendCrebitosSimulation
 
 # `resultados/` de fora: são saídas versionadas, e uma execução anterior
@@ -21,9 +37,9 @@ if [[ -n "$(git -C "$RAIZ" status --porcelain -- . ':(exclude)resultados' 2>/dev
 fi
 
 echo "==> recriando a stack (estado residual falsifica a verificação de consistência)"
-docker compose -f "$COMPOSE" down -v >/dev/null 2>&1 || true
+docker compose "${compose_args[@]}" down -v >/dev/null 2>&1 || true
 inicio=$(date +%s)
-docker compose -f "$COMPOSE" up -d --build >/dev/null
+docker compose "${compose_args[@]}" up -d --build >/dev/null
 
 # A competição dá 40s para a API responder, testando de 2 em 2 segundos.
 pronta=0
@@ -35,7 +51,7 @@ for _ in $(seq 1 20); do
 done
 if [[ "$pronta" -eq 0 ]]; then
     echo "FALHOU: a API não respondeu em 40s (limite da competição)" >&2
-    docker compose -f "$COMPOSE" logs --tail=40 >&2
+    docker compose "${compose_args[@]}" logs --tail=40 >&2
     exit 1
 fi
 echo "==> stack pronta em ${pronta}s"
@@ -43,8 +59,8 @@ echo "==> stack pronta em ${pronta}s"
 bash "$RAIZ/scripts/smoke-test.sh"
 
 echo "==> resetando o estado alterado pelo smoke test"
-docker compose -f "$COMPOSE" down -v >/dev/null 2>&1
-docker compose -f "$COMPOSE" up -d >/dev/null
+docker compose "${compose_args[@]}" down -v >/dev/null 2>&1
+docker compose "${compose_args[@]}" up -d >/dev/null
 for _ in $(seq 1 20); do
     curl -fsS http://localhost:9999/clientes/1/extrato >/dev/null 2>&1 && break
     sleep 2
@@ -63,5 +79,5 @@ destino="$RAIZ/resultados/$SLUG/$carimbo"
 mkdir -p "$destino"
 cp -r "$relatorio/." "$destino/"
 
-python3 "$RAIZ/scripts/metadata-carga.py" "$destino" "$SLUG" "$COMPOSE" "$pronta"
+python3 "$RAIZ/scripts/metadata-carga.py" "$destino" "$SLUG" "$pronta" "${compose_args[@]}"
 echo "==> resultado em $destino"

@@ -83,7 +83,8 @@ smoke proj="" var="":
 # executa a simulação Gatling e arquiva o resultado
 [group('ciclo')]
 load proj var="":
-    @bash {{RAIZ}}/scripts/rodar-carga.sh "$(just _slug {{proj}} {{var}})"
+    @bash {{RAIZ}}/scripts/rodar-carga.sh "$(just _slug {{proj}} {{var}})" \
+        $(just _compose {{proj}} {{var}} | tr '\n' ' ')
 
 # o comando do dia a dia: up -> smoke -> load -> down
 [group('ciclo')]
