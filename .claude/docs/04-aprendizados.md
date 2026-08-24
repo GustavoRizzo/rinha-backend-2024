@@ -82,7 +82,7 @@ limite de rede.** Afrouxar um gargalo revelou o outro — que é como gargalos
 costumam se comportar.
 
 **Ação**: `bench-container.sh` aborta com mais de 1% de erros de conexão.
-Achado central de `performance/02-container-e-cgroup.md`.
+Achado central de `performance/django/02-container-e-cgroup.md`.
 
 **Camadas — para não confundir HTTP com TCP**:
 
@@ -280,13 +280,13 @@ documento próprio em `performance/`.
 
 | Decisão | Efeito medido | Onde |
 | - | - | - |
-| Conexão de banco persistente (`CONN_MAX_AGE`) | **4,75x** de vazão | [04](./performance/04-postgres.md) |
-| Socket Unix entre nginx e API | 2,9x; amplitude de 246% para 3,9% | [03](./performance/03-nginx-e-socket-unix.md) |
-| Worker `sync` em vez de `gthread` | 2,4x | [06](./performance/06-tipos-de-worker.md) |
-| Worker `sync` em vez de ASGI/uvicorn | 4,7x | [06](./performance/06-tipos-de-worker.md) |
-| Cota de CPU nas APIs, não no banco | p98 de 217ms para 7ms | [05](./performance/05-stack-completa-gatling.md) |
-| 1 worker por API em vez de 4 | 28% (sob cota) | [04](./performance/04-postgres.md) |
-| `DEBUG=False` | 4,1% | [01](./performance/01-debug-vs-producao.md) |
+| Conexão de banco persistente (`CONN_MAX_AGE`) | **4,75x** de vazão | [04](./performance/django/04-postgres.md) |
+| Socket Unix entre nginx e API | 2,9x; amplitude de 246% para 3,9% | [03](./performance/django/03-nginx-e-socket-unix.md) |
+| Worker `sync` em vez de `gthread` | 2,4x | [06](./performance/django/06-tipos-de-worker.md) |
+| Worker `sync` em vez de ASGI/uvicorn | 4,7x | [06](./performance/django/06-tipos-de-worker.md) |
+| Cota de CPU nas APIs, não no banco | p98 de 217ms para 7ms | [05](./performance/django/05-stack-completa-gatling.md) |
+| 1 worker por API em vez de 4 | 28% (sob cota) | [04](./performance/django/04-postgres.md) |
+| `DEBUG=False` | 4,1% | [01](./performance/django/01-debug-vs-producao.md) |
 
 **Conclusão que atravessa todas**: sob cota de cgroup, **CPU por requisição é a
 única métrica que importa**. Vazão é consequência aritmética — cota dividida por

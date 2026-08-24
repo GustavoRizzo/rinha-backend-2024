@@ -38,7 +38,7 @@ de 7ms contra um SLA de 250ms, subida em ~20s contra um limite de 40s.
 - `synchronous_commit` como variável medida, não como decisão
 - bridge vs. host no Docker: impossível no Docker Desktop
 - Outras linguagens/frameworks — previsões registradas em
-  [`performance/06`](./performance/06-tipos-de-worker.md), seção 8
+  [`performance/django/06`](./performance/django/06-tipos-de-worker.md), seção 8
 
 ## Referência rápida
 

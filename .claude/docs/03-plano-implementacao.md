@@ -91,12 +91,12 @@ Slug da variante para efeito de resultados: `<projeto>-<override>` →
 | - | - | - |
 | **A1** ORM + `select_for_update` | **não feito** — fomos direto ao SQL cru | — |
 | **A2** `UPDATE ... RETURNING` | feito, é a implementação do projeto | `crebitos/models.py` |
-| **A3** Configuração tunada | feito | [04](./performance/04-postgres.md), [05](./performance/05-stack-completa-gatling.md) |
+| **A3** Configuração tunada | feito | [04](./performance/django/04-postgres.md), [05](./performance/django/05-stack-completa-gatling.md) |
 | **B** Estratégias de concorrência | **não feito** — só B2 existe, nunca comparado | — |
-| **C1/C2** Postgres vs. SQLite | feito | [04](./performance/04-postgres.md) |
+| **C1/C2** Postgres vs. SQLite | feito | [04](./performance/django/04-postgres.md) |
 | **C3/C4** MySQL, Mongo | não feito | — |
-| **D** Frameworks e runtimes | **não feito** — só previsões registradas | [06, seção 8](./performance/06-tipos-de-worker.md) |
-| **E** Infraestrutura | feito em parte: nginx, socket Unix, distribuição de cota | [03](./performance/03-nginx-e-socket-unix.md), [05](./performance/05-stack-completa-gatling.md) |
+| **D** Frameworks e runtimes | **não feito** — só previsões registradas | [06, seção 8](./performance/django/06-tipos-de-worker.md) |
+| **E** Infraestrutura | feito em parte: nginx, socket Unix, distribuição de cota | [03](./performance/django/03-nginx-e-socket-unix.md), [05](./performance/django/05-stack-completa-gatling.md) |
 
 **A maior lacuna é o Bloco B.** A implementação usa o `UPDATE` atômico
 condicional e ele entregou zero inconsistências em 553.527 requisições — mas

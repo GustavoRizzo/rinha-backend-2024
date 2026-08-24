@@ -53,13 +53,13 @@ Cada escolha tem um número que a sustenta:
 
 | Decisão | Efeito medido | Experimento |
 | - | - | - |
-| `CONN_MAX_AGE` persistente | **4,75x** de vazão | [04](./.claude/docs/performance/04-postgres.md) |
-| Socket Unix entre nginx e APIs | 2,9x; amplitude de 246% para 3,9% | [03](./.claude/docs/performance/03-nginx-e-socket-unix.md) |
-| Worker `sync` em vez de `gthread` | 2,4x | [06](./.claude/docs/performance/06-tipos-de-worker.md) |
-| Worker `sync` em vez de ASGI/uvicorn | 4,7x | [06](./.claude/docs/performance/06-tipos-de-worker.md) |
-| Cota de CPU nas APIs, não no banco | p98 de 217ms para 7ms | [05](./.claude/docs/performance/05-stack-completa-gatling.md) |
-| 1 worker por API em vez de 4 | 28% sob cota | [04](./.claude/docs/performance/04-postgres.md) |
-| `DEBUG=False` | 4,1% | [01](./.claude/docs/performance/01-debug-vs-producao.md) |
+| `CONN_MAX_AGE` persistente | **4,75x** de vazão | [04](./.claude/docs/performance/django/04-postgres.md) |
+| Socket Unix entre nginx e APIs | 2,9x; amplitude de 246% para 3,9% | [03](./.claude/docs/performance/django/03-nginx-e-socket-unix.md) |
+| Worker `sync` em vez de `gthread` | 2,4x | [06](./.claude/docs/performance/django/06-tipos-de-worker.md) |
+| Worker `sync` em vez de ASGI/uvicorn | 4,7x | [06](./.claude/docs/performance/django/06-tipos-de-worker.md) |
+| Cota de CPU nas APIs, não no banco | p98 de 217ms para 7ms | [05](./.claude/docs/performance/django/05-stack-completa-gatling.md) |
+| 1 worker por API em vez de 4 | 28% sob cota | [04](./.claude/docs/performance/django/04-postgres.md) |
+| `DEBUG=False` | 4,1% | [01](./.claude/docs/performance/django/01-debug-vs-producao.md) |
 
 A corretude vem de uma instrução só, que resolve leitura, validação e escrita
 sem janela entre elas:
@@ -80,12 +80,12 @@ números, o commit exato medido e os comandos para replicar.
 
 | # | Experimento | Achado principal |
 | - | - | - |
-| [01](./.claude/docs/performance/01-debug-vs-producao.md) | `DEBUG` e `runserver` vs. Gunicorn | O `runserver` tem escalabilidade **negativa**: 646 rps com 1 conexão, 223 com 50 |
-| [02](./.claude/docs/performance/02-container-e-cgroup.md) | Container e cgroup | Sob cota, 1 worker bate 4 por 37%; e o worker sync esgota as portas efêmeras do host |
-| [03](./.claude/docs/performance/03-nginx-e-socket-unix.md) | nginx e socket Unix | Acrescentar um salto deixou o sistema **mais rápido**: a API parou de fazer trabalho de rede |
-| [04](./.claude/docs/performance/04-postgres.md) | Postgres | O padrão do Django (`CONN_MAX_AGE=0`) custa 4,75x. Sob throttling, esperar I/O é de graça |
-| [05](./.claude/docs/performance/05-stack-completa-gatling.md) | Stack completa + Gatling | A cauda era throttling, e a cota estava no serviço errado |
-| [06](./.claude/docs/performance/06-tipos-de-worker.md) | Tipos de worker | O Gatling **satura**: `sync` e `gthread` tiram a mesma nota com 59% de diferença de vazão |
+| [01](./.claude/docs/performance/django/01-debug-vs-producao.md) | `DEBUG` e `runserver` vs. Gunicorn | O `runserver` tem escalabilidade **negativa**: 646 rps com 1 conexão, 223 com 50 |
+| [02](./.claude/docs/performance/django/02-container-e-cgroup.md) | Container e cgroup | Sob cota, 1 worker bate 4 por 37%; e o worker sync esgota as portas efêmeras do host |
+| [03](./.claude/docs/performance/django/03-nginx-e-socket-unix.md) | nginx e socket Unix | Acrescentar um salto deixou o sistema **mais rápido**: a API parou de fazer trabalho de rede |
+| [04](./.claude/docs/performance/django/04-postgres.md) | Postgres | O padrão do Django (`CONN_MAX_AGE=0`) custa 4,75x. Sob throttling, esperar I/O é de graça |
+| [05](./.claude/docs/performance/django/05-stack-completa-gatling.md) | Stack completa + Gatling | A cauda era throttling, e a cota estava no serviço errado |
+| [06](./.claude/docs/performance/django/06-tipos-de-worker.md) | Tipos de worker | O Gatling **satura**: `sync` e `gthread` tiram a mesma nota com 59% de diferença de vazão |
 
 Material de apoio em [`.claude/docs/`](./.claude/docs/):
 

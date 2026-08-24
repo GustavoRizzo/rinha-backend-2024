@@ -60,11 +60,14 @@ razoável marca USD 100.000. Ela aprova, não compara.
 
 ### Documentação de experimentos
 
-Um arquivo por experimento em `.claude/docs/performance/`, numeração
-**cronológica** (pode ser renumerada). Ordem obrigatória: ressalvas
-metodológicas → ambiente e commit → comandos para replicar → números crus →
-conclusões. As ressalvas vêm **antes** dos números de propósito: o gráfico
-sobrevive, o contexto some.
+Um arquivo por experimento em `.claude/docs/performance/<projeto>/` — um
+diretório por pasta de framework (`django/`, `fastapi/`), cada um com seu
+índice. A numeração é **cronológica**, reinicia em cada projeto e pode ser
+renumerada; ao citar experimento de outro projeto, use o caminho (`django/06`).
+
+Ordem obrigatória dentro do arquivo: ressalvas metodológicas → ambiente e commit
+→ comandos para replicar → números crus → conclusões. As ressalvas vêm **antes**
+dos números de propósito: o gráfico sobrevive, o contexto some.
 
 Aprendizados que valem além de um experimento vão para
 `04-aprendizados.md`. Atalhos que só existem por ser competição vão para

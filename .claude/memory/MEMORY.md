@@ -1,1 +1,1 @@
-- [Documentação de testes de performance](.claude/memory/documentacao-testes-performance.md) — um arquivo por experimento em `.claude/docs/performance/`, ressalvas antes dos números, commit registrado.
+- [Documentação de testes de performance](.claude/memory/documentacao-testes-performance.md) — um arquivo por experimento em `.claude/docs/performance/<projeto>/`, ressalvas antes dos números, commit registrado.

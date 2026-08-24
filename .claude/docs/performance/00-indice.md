@@ -1,21 +1,23 @@
 # Testes de performance — índice
 
-Cada experimento tem arquivo próprio. A convenção de escrita está descrita em
-`.claude/memory/documentacao-testes-performance.md`.
+Um diretório por **projeto** (pasta de framework), porque a numeração dos
+experimentos é cronológica **dentro de cada projeto** — o experimento 01 do
+FastAPI não é continuação do 06 do Django, é o primeiro de outra linha.
 
-| # | Experimento | Data | Estado |
-| - | - | - | - |
-| [01](./01-debug-vs-producao.md) | Custo do `DEBUG=True` e de `runserver` vs. Gunicorn (SQLite) | 2026-08-21 | **concluído** |
-| [02](./02-container-e-cgroup.md) | Container + cgroup (SQLite): workers sob cota, throttling | 2026-08-21 | **parcial** |
-| [03](./03-nginx-e-socket-unix.md) | nginx na frente, e o que um socket Unix vale | 2026-08-21 | **concluído** |
-| [04](./04-postgres.md) | Postgres: leitura, escrita e o custo de `CONN_MAX_AGE` | 2026-08-21 | **concluído** |
-| [05](./05-stack-completa-gatling.md) | Stack completa (2 instâncias) + Gatling: **USD 100.000, zero inconsistências** | 2026-08-21 | **concluído** |
-| [06](./06-tipos-de-worker.md) | Tipos de worker: `sync`, `gthread`, ASGI/uvicorn | 2026-08-22 | **concluído** |
+| Projeto | Experimentos | Estado |
+| - | - | - |
+| [django/](./django/00-indice.md) | 01 a 06 | **concluídos** — USD 100.000, zero inconsistências |
+| [fastapi/](./fastapi/00-indice.md) | 01 em diante | **em andamento** |
+
+A convenção de escrita está descrita em
+`.claude/memory/documentacao-testes-performance.md`.
 
 ## Regras de ouro destes documentos
 
-0. **A numeração é cronológica.** Os números contam a ordem em que os
-   experimentos foram feitos, e são renumerados quando a ordem muda.
+0. **A numeração é cronológica, e reinicia por projeto.** Os números contam a
+   ordem em que os experimentos foram feitos, e são renumerados quando a ordem
+   muda. Ao citar um experimento de outro projeto, cite o caminho completo
+   (`django/06`), nunca só o número.
 1. **Ressalvas antes dos números.** Todo arquivo abre dizendo o que o teste
    *não* mede.
 2. **Commit registrado.** Sem o hash, o número não é replicável.
@@ -27,3 +29,6 @@ Cada experimento tem arquivo próprio. A convenção de escrita está descrita e
    um hash que não descreve o código medido é pior que hash nenhum.
 6. **Nunca comparar números entre ferramentas ou versões diferentes** de
    gerador de carga. Ver a regra derivada em `04-aprendizados.md`.
+7. **Comparação entre projetos exige a mesma bancada.** `oha` do FastAPI só
+   vale contra `oha` do Django se o rig, a cota de CPU, o endpoint e a duração
+   forem os mesmos. A métrica de comparação é **CPU por requisição**, não rps.
