@@ -1,0 +1,27 @@
+[project]
+name = "rinha-fastapi"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.121",
+    # [standard] traz uvloop e httptools. Sem eles o uvicorn cai no loop puro
+    # do asyncio e no parser HTTP em Python — que é justamente a parte que este
+    # experimento quer medir rápida.
+    "uvicorn[standard]>=0.38",
+    "asyncpg>=0.30",
+    "orjson>=3.11",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4",
+    "pytest-asyncio>=1.2",
+    "httpx>=0.28",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# A raiz do projeto no sys.path: `app/` é um pacote, não um projeto instalado.
+# Instalar a aplicação só para testá-la acrescentaria um passo de build ao
+# ciclo, e a imagem de produção também roda a partir do diretório (`COPY . .`).
+pythonpath = ["."]

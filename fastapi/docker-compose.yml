@@ -1,0 +1,112 @@
+name: rinha-backend-fastapi
+
+# Stack completa da Rinha em FastAPI: load balancer + 2 APIs + banco.
+#
+# Orçamento: 1.5 CPU e 550MB SOMANDO TUDO. A distribuição é IDÊNTICA à da stack
+# Django (`django/docker-compose.yml`), e isso é deliberado: ela foi obtida nos
+# experimentos `django/01` a `django/05`, e repeti-la aqui é o que mantém *uma
+# variável por vez*. Rebalancear a cota junto com a troca de framework tornaria
+# a diferença inatribuível.
+#
+# Se o FastAPI for mesmo mais barato por requisição, a distribuição ótima muda —
+# a previsão registrada em `performance/fastapi/00-indice.md` é que o gargalo
+# migre para o Postgres. Mas isso é o experimento SEGUINTE, com esta stack como
+# linha de base.
+#
+# Confira a soma com: just check fastapi
+services:
+  db:
+    image: postgres:18-alpine
+    hostname: db
+    environment:
+      - POSTGRES_DB=rinha
+      - POSTGRES_USER=rinha
+      - POSTGRES_PASSWORD=rinha
+    volumes:
+      - ../infra/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      # MESMOS arquivos que a stack Django usa. Executados UMA vez, em ordem
+      # alfabética, na criação do volume. O `ddl.sql` cria também a tabela
+      # `django_migrations` — peso morto aqui, mantido porque um schema
+      # divergente invalidaria a comparação por um motivo que não é o framework.
+      - ../infra/sql:/docker-entrypoint-initdb.d:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      # -h 127.0.0.1 de propósito: durante a inicialização a imagem sobe um
+      # servidor TEMPORÁRIO que escuta apenas no socket Unix.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U rinha -d rinha"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    deploy:
+      resources:
+        limits:
+          cpus: "0.60"
+          memory: "318MB"
+
+  api01: &api
+    build:
+      context: .
+    hostname: api01
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - WEB_CONCURRENCY=1
+      - UVICORN_BIND=unix:/sockets/api01.sock
+      # Variantes do experimento. Os padrões espelham o Django o mais de perto
+      # possível: validação à mão e extrato em duas queries. As alternativas
+      # (pydantic, query única) são otimizações a MEDIR, não a assumir.
+      - WEB_SERVER=${API_SERVER:-uvicorn}
+      - VALIDACAO=${VALIDACAO:-manual}
+      - EXTRATO_QUERY=${EXTRATO_QUERY:-duas}
+      - SERIALIZACAO=${SERIALIZACAO:-orjson}
+      # Teto por instância: 2 APIs x 8 + folga cabe nas 20 conexões que o
+      # `postgresql.conf` permite.
+      - DB_POOL_MIN=${DB_POOL_MIN:-2}
+      - DB_POOL_MAX=${DB_POOL_MAX:-8}
+    volumes:
+      - sockets:/sockets
+    deploy:
+      resources:
+        limits:
+          cpus: "0.40"
+          memory: "100MB"
+
+  api02:
+    <<: *api
+    hostname: api02
+    environment:
+      - DB_HOST=db
+      - WEB_CONCURRENCY=1
+      - UVICORN_BIND=unix:/sockets/api02.sock
+      - WEB_SERVER=${API_SERVER:-uvicorn}
+      - VALIDACAO=${VALIDACAO:-manual}
+      - EXTRATO_QUERY=${EXTRATO_QUERY:-duas}
+      - SERIALIZACAO=${SERIALIZACAO:-orjson}
+      - DB_POOL_MIN=${DB_POOL_MIN:-2}
+      - DB_POOL_MAX=${DB_POOL_MAX:-8}
+
+  nginx:
+    image: nginx:1.29-alpine
+    depends_on:
+      - api01
+      - api02
+    volumes:
+      - ../infra/nginx/nginx-rinha.conf:/etc/nginx/nginx.conf:ro
+      - sockets:/sockets
+    ports:
+      - "9999:9999"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: "32MB"
+
+volumes:
+  sockets:
+
+networks:
+  default:
+    driver: bridge
+    name: rinha-fastapi

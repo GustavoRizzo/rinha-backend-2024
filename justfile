@@ -201,6 +201,54 @@ dj-sync:
     cd {{RAIZ}}/django && uv sync
 
 # ==========================================================================
+# fastapi — projeto FastAPI + asyncpg
+# ==========================================================================
+
+# sobe o Postgres descartável dos testes (porta 5433, schema de infra/sql/)
+[group('fastapi')]
+fa-db-teste acao="up":
+    @bash {{RAIZ}}/scripts/fastapi-db-teste.sh {{acao}}
+
+# roda a suíte contra o banco de teste (sobe e derruba sozinho)
+[group('fastapi')]
+fa-test *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    trap 'bash {{RAIZ}}/scripts/fastapi-db-teste.sh down' EXIT
+    bash {{RAIZ}}/scripts/fastapi-db-teste.sh up
+    cd {{RAIZ}}/fastapi && uv run --no-active pytest {{args}}
+
+# a suíte inteira em CADA variante — é o que autoriza compará-las depois
+[group('fastapi')]
+fa-test-variantes:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    trap 'bash {{RAIZ}}/scripts/fastapi-db-teste.sh down' EXIT
+    bash {{RAIZ}}/scripts/fastapi-db-teste.sh up
+    cd {{RAIZ}}/fastapi
+    for v in "VALIDACAO=manual" "VALIDACAO=pydantic" "EXTRATO_QUERY=duas" \
+             "EXTRATO_QUERY=unica" "SERIALIZACAO=orjson" "SERIALIZACAO=stdlib"; do
+        echo "=== $v"
+        env "$v" uv run --no-active pytest -q
+    done
+
+# servidor local, fora do Docker (exige `just fa-db-teste`)
+[group('fastapi')]
+fa-serve porta="8000":
+    cd {{RAIZ}}/fastapi && DB_PORT=5433 VERIFICAR_CLIENTES=0 \
+        uv run --no-active uvicorn app.main:app --port {{porta}} --reload
+
+# adiciona dependência (ex: just fa-add granian)
+[group('fastapi')]
+fa-add +pkgs:
+    cd {{RAIZ}}/fastapi && uv add {{pkgs}}
+
+# sincroniza o ambiente com o lock
+[group('fastapi')]
+fa-sync:
+    cd {{RAIZ}}/fastapi && uv sync
+
+# ==========================================================================
 # bench — comparativos locais rápidos (SQLite, sem Docker, ferramenta: oha)
 #
 # NÃO confundir com `just load`, que roda o Gatling contra a stack completa.
