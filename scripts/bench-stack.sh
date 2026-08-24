@@ -40,6 +40,9 @@ SERVIDOR="${BENCH_SERVER:-$([[ "$PROJETO" == "django" ]] && echo gunicorn-sync |
 THREADS="${BENCH_THREADS:-4}"
 API="$PERFIL_API"
 LB="$PERFIL_LB"
+# Definido pelo perfil apenas nos rigs com banco. Vazio => não coletamos o
+# terceiro cgroup, e o JSON simplesmente não traz o bloco.
+DB="${PERFIL_DB:-}"
 PORTA="${LB_PORTA:-9999}"
 CONCORRENCIA="${BENCH_CONCORRENCIA:-50}"
 
@@ -104,6 +107,10 @@ prefixo_projeto=""
 [[ "$PROJETO" != "django" ]] && prefixo_projeto="${PROJETO}-"
 config="${prefixo_projeto}${rig}-${sufixo_servidor}-${ENDPOINT}-cpu${cpus}-w${workers}"
 [[ -n "$rps" ]] && config="${config}-${rps}rps"
+# BENCH_TAG separa séries de experimentos diferentes que compartilham a mesma
+# configuração. Sem ele, repetir uma configuração com instrumentação nova
+# sobrescreve — em silêncio — o arquivo que sustenta um documento já escrito.
+[[ -n "${BENCH_TAG:-}" ]] && config="${config}-${BENCH_TAG}"
 
 echo "[$config] aquecimento (descartado)..." >&2
 oha -z "$duracao" -c "$CONCORRENCIA" --no-tui --output-format quiet \
@@ -127,6 +134,10 @@ for i in $(seq 1 "$reps"); do
     a_thu=$(stat_de "$API" throttled_usec); a_per=$(stat_de "$API" nr_periods)
     n_uso=$(stat_de "$LB" usage_usec);   n_thr=$(stat_de "$LB" nr_throttled)
     n_thu=$(stat_de "$LB" throttled_usec);  n_per=$(stat_de "$LB" nr_periods)
+    if [[ -n "$DB" ]]; then
+        d_uso=$(stat_de "$DB" usage_usec);   d_thr=$(stat_de "$DB" nr_throttled)
+        d_thu=$(stat_de "$DB" throttled_usec); d_per=$(stat_de "$DB" nr_periods)
+    fi
 
     saida=$(oha -z "$duracao" -c "$CONCORRENCIA" --no-tui --output-format json \
                 "${taxa[@]}" "${alvo[@]}")
@@ -138,15 +149,26 @@ for i in $(seq 1 "$reps"); do
         exit 1
     fi
 
-    extra=$(python3 "$RAIZ/scripts/bench-cgroup.py" "$total" \
-        "$(( $(stat_de "$API" usage_usec)     - a_uso ))" \
-        "$(( $(stat_de "$API" nr_throttled)   - a_thr ))" \
-        "$(( $(stat_de "$API" throttled_usec) - a_thu ))" \
-        "$(( $(stat_de "$API" nr_periods)     - a_per ))" \
-        "$(( $(stat_de "$LB" usage_usec)      - n_uso ))" \
-        "$(( $(stat_de "$LB" nr_throttled)    - n_thr ))" \
-        "$(( $(stat_de "$LB" throttled_usec)  - n_thu ))" \
-        "$(( $(stat_de "$LB" nr_periods)      - n_per ))")
+    args_cgroup=(
+        "$total"
+        "$(( $(stat_de "$API" usage_usec)     - a_uso ))"
+        "$(( $(stat_de "$API" nr_throttled)   - a_thr ))"
+        "$(( $(stat_de "$API" throttled_usec) - a_thu ))"
+        "$(( $(stat_de "$API" nr_periods)     - a_per ))"
+        "$(( $(stat_de "$LB" usage_usec)      - n_uso ))"
+        "$(( $(stat_de "$LB" nr_throttled)    - n_thr ))"
+        "$(( $(stat_de "$LB" throttled_usec)  - n_thu ))"
+        "$(( $(stat_de "$LB" nr_periods)      - n_per ))"
+    )
+    if [[ -n "$DB" ]]; then
+        args_cgroup+=(
+            "$(( $(stat_de "$DB" usage_usec)     - d_uso ))"
+            "$(( $(stat_de "$DB" nr_throttled)   - d_thr ))"
+            "$(( $(stat_de "$DB" throttled_usec) - d_thu ))"
+            "$(( $(stat_de "$DB" nr_periods)     - d_per ))"
+        )
+    fi
+    extra=$(python3 "$RAIZ/scripts/bench-cgroup.py" "${args_cgroup[@]}")
 
     destino="$RAIZ/resultados/bench/${config}.rep${i}.json"
     printf '%s' "$saida" | python3 "$RAIZ/scripts/bench-metadata.py" \

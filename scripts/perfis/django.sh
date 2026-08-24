@@ -24,14 +24,17 @@ perfil_rig() {
     case "$rig" in
         nginx-unix) compose_args=(-f "$base_sqlite") ;;
         nginx-tcp)  compose_args=(-f "$base_sqlite" -f "$RAIZ/django/compose.bench-nginx-tcp.yml") ;;
-        postgres)   compose_args=(-f "$base_pg"); export BENCH_BANCO=postgres ;;
+        postgres)   compose_args=(-f "$base_pg"); export BENCH_BANCO=postgres
+                    PERFIL_DB=rinha-bench-db ;;
         postgres-sem-limite)
             compose_args=(-f "$base_pg" -f "$RAIZ/django/compose.bench-sem-limite.yml")
-            export BENCH_BANCO=postgres ;;
+            export BENCH_BANCO=postgres
+            PERFIL_DB=rinha-bench-db ;;
         # Mede o custo de abrir uma conexão nova a cada requisição
         # (CONN_MAX_AGE=0, que é o PADRÃO do Django).
         postgres-sem-persistencia)
-            compose_args=(-f "$base_pg"); export DB_PERSISTENTE=0 BENCH_BANCO=postgres ;;
+            compose_args=(-f "$base_pg"); export DB_PERSISTENTE=0 BENCH_BANCO=postgres
+            PERFIL_DB=rinha-bench-db ;;
         *) return 1 ;;
     esac
     export DB_POOL="${BENCH_POOL:-0}"

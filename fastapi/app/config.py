@@ -37,10 +37,14 @@ DB_POOL_MAX: int = int(os.environ.get("DB_POOL_MAX", "8"))
 # ganho do parser. É medição, não fé.
 VALIDACAO: str = os.environ.get("VALIDACAO", "manual")
 
-# `duas`  — espelha o Django: um SELECT do cliente, outro das 10 transações.
 # `unica` — uma query só, com o array de transações já serializado em JSON pelo
-#           Postgres e embutido na resposta sem passar pelo Python.
-EXTRATO_QUERY: str = os.environ.get("EXTRATO_QUERY", "duas")
+#           Postgres e embutido na resposta sem passar pelo Python. **Padrão**
+#           desde o experimento `performance/fastapi/01`: 1,25x, com teste
+#           provando que as duas variantes produzem os mesmos bytes.
+# `duas`   — um SELECT do cliente, outro das 10 transações. Foi o padrão até o
+#            experimento 01, porque espelha o que o Django faz; continua
+#            disponível porque é a linha de base daquela comparação.
+EXTRATO_QUERY: str = os.environ.get("EXTRATO_QUERY", "unica")
 
 # `orjson` — serializador em Rust.
 # `stdlib` — `json.dumps`, para medir quanto o orjson vale num payload de 2

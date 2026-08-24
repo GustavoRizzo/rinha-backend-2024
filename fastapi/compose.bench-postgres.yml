@@ -51,7 +51,7 @@ services:
       - UVICORN_BIND=unix:/sockets/api01.sock
       - WEB_SERVER=${API_SERVER:-uvicorn}
       - VALIDACAO=${VALIDACAO:-manual}
-      - EXTRATO_QUERY=${EXTRATO_QUERY:-duas}
+      - EXTRATO_QUERY=${EXTRATO_QUERY:-unica}
       - SERIALIZACAO=${SERIALIZACAO:-orjson}
       - DB_POOL_MIN=${DB_POOL_MIN:-2}
       - DB_POOL_MAX=${DB_POOL_MAX:-8}

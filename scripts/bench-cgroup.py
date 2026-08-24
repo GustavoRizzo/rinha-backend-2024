@@ -4,7 +4,8 @@ Os denominadores aqui são legitimamente zero em alguns cenários — sem cota
 apertada não há throttling, e `nr_periods` pode não avançar. Divisão protegida
 em vez de erro.
 
-Uso: bench-cgroup.py <total_req> <uso_us> <thr> <thr_us> <periodos> [... idem nginx]
+Uso: bench-cgroup.py <total_req> <uso_us> <thr> <thr_us> <periodos>
+                     [... idem nginx] [... idem banco]
 """
 
 import json
@@ -35,6 +36,10 @@ def main() -> None:
     # Argumentos extras descrevem um segundo cgroup (o do load balancer).
     if len(valores) >= 9:
         saida["cgroup_nginx"] = bloco(total, *valores[5:9])
+    # E um terceiro, o do banco. É ele que responde "o gargalo migrou?": sem
+    # medir o cgroup do Postgres, a resposta seria opinião.
+    if len(valores) >= 13:
+        saida["cgroup_db"] = bloco(total, *valores[9:13])
     print(json.dumps(saida))
 
 

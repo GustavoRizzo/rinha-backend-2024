@@ -51,7 +51,7 @@ def main() -> None:
             # Só existe sob cgroup: é o que distingue "lento" de "congelado".
             **{bloco: {chave: resumo([e[bloco][chave] for e in execucoes])
                        for chave in base[bloco]}
-               for bloco in ("cgroup", "cgroup_nginx") if bloco in base},
+               for bloco in ("cgroup", "cgroup_nginx", "cgroup_db") if bloco in base},
         },
         open(destino, "w"),
         indent=2,
