@@ -5,7 +5,7 @@ experimento 01 do Go **não** é continuação do 04 do Elixir.
 
 | # | Experimento | Data | Estado |
 | - | - | - | - |
-| — | *(nenhum ainda: a implementação existe e passa nos testes, mas nada foi medido)* | 2026-08-25 | — |
+| — | *(nenhum ainda. A stack passa na prova oficial — USD 100.000, zero inconsistências — mas com a pior cauda das quatro, e a bancada não rodou. Ver seção 7.5)* | 2026-08-25 | — |
 
 Este arquivo é o documento de abertura do projeto. Ele registra o que se pretende
 construir, as previsões **antes** de existir implementação, e as poucas medições
@@ -359,11 +359,82 @@ Três leituras:
    `NumCPU=20`. A linha é impressa de propósito em toda subida: é o que permite
    conferir, depois, com que dimensionamento cada série rodou.
 
-### 7.5 O que ainda não foi medido
+### 7.5 Primeira execução da prova oficial
 
-Custo por requisição, cauda, comportamento sob saturação e memória **sob carga**
-— tudo o que exige bancada. E, antes de qualquer um deles, `just diag-prepared
-go`, que é o próximo comando do projeto.
+`resultados/go/20260825T173713`, commit `2dc2606`.
+
+**Ressalvas, e elas são grandes**: é **uma** execução, a primeira, sem
+aquecimento descartado e sem repetição. A regra do projeto diz que a primeira
+execução de qualquer configuração é sistematicamente mais lenta, e que diferença
+abaixo de ~3% é ruído. Nada abaixo vale como propriedade da stack.
+
+| | Django | FastAPI | Elixir | **Go (1 execução)** |
+| - | - | - | - | - |
+| pontuação | 100.000 | 100.000 | 100.000 | **100.000** |
+| abaixo de 250ms | 100% | 100% | ~100% | **98,57%** |
+| p98 | 7 ms | 5 ms | 5 ms | **51 ms** |
+| p99 | — | — | — | **443 ms** |
+| subida | ~20 s | 7 s | 7 s | **7 s** |
+| inconsistências | 0 | 0 | 0 | **0** |
+
+CPU por requisição, por serviço, na carga real (mesmo instrumento de
+[`elixir/02`](../elixir/02-ocioso-na-carga-real.md)):
+
+| serviço | Elixir | **Go** | throttling |
+| - | - | - | - |
+| api01 | 297,3 µs | **227,1 µs** | **0,0%** |
+| api02 | 300,8 µs | **230,9 µs** | **0,0%** |
+| db | 316,8 µs | 313,4 µs | 0,2% |
+| nginx | 168,4 µs | 180,6 µs | 1,2% |
+
+Duas leituras opostas, e as duas precisam ficar:
+
+**A aplicação é a mais barata das quatro.** 227–231 µs por requisição contra
+297–301 do Elixir, com zero throttling nas duas instâncias. E o custo do banco
+ficou **idêntico** ao do Elixir (313,4 contra 316,8 µs) — o mesmo empate que
+[`elixir/04`, §5.2](../elixir/04-o-statement-que-nao-era-reusado.md) obteve
+entre asyncpg e Postgrex com statements reusados, o que é evidência indireta
+(não prova) de que o pgx está reusando os dele.
+
+**E a cauda é, de longe, a pior das quatro.** 882 requisições acima de 250ms,
+contra um máximo de 51ms do Elixir na execução equivalente. A margem para a
+multa de SLA é de 0,57 ponto percentual: uma execução um pouco pior custa
+dinheiro, enquanto as outras três têm 2 pontos de folga.
+
+**Onde a cauda está**, extraído da série de p99 por segundo do relatório:
+
+```
+segundo   0  -> p99 157ms     (primeira requisição; subida)
+segundos  1..240 -> p99 entre 2 e 53ms
+segundos 241..244 -> p99 538, 635, 875, 946ms
+```
+
+Ou seja: **toda a cauda está nos 4 últimos segundos de um teste de 244**, e o
+resto do tempo a stack responde melhor que o p98 sugere. Não é degradação
+progressiva — a latência não cresce ao longo do teste, o que descartaria
+saturação pelo critério da seção 5 do
+[plano](../../03-plano-implementacao.md).
+
+**Hipóteses, nenhuma medida, e o método ao lado de cada uma** — a regra que o
+[`elixir/04`, §6.3](../elixir/04-o-statement-que-nao-era-reusado.md) deixou:
+
+| hipótese | como decidir |
+| - | - |
+| checkpoint do Postgres no fim da carga | `log_checkpoints` e o horário no log do banco |
+| GC do Go num heap que cresceu durante o teste | `GODEBUG=gctrace=1` numa execução, e a variante `GOMEMLIMIT` |
+| throttling concentrado no fim (nginx marcou 1,2%) | snapshot de `cpu.stat` por serviço a cada segundo, não só no fim |
+| artefato do encerramento do próprio Gatling | repetir a execução e ver se o pico acompanha o fim ou o relógio |
+
+A quarta é a mais barata de testar e a que mais mudaria a leitura, então é a
+primeira. **Enquanto isso, o p98 de 51ms desta stack não deve ser comparado com
+os 5ms das outras**: são números com formas diferentes, e a média esconde isso.
+
+### 7.6 O que ainda não foi medido
+
+Custo por requisição **na bancada** (o número comparável entre projetos),
+comportamento sob saturação, memória sob carga, e as variantes `GOMAXPROCS`,
+`EXTRATO_QUERY`, `SERIALIZACAO` e `GOMEMLIMIT` — nenhuma foi exercitada em série
+ainda. E, antes de qualquer uma delas, `just diag-prepared go`.
 
 ---
 

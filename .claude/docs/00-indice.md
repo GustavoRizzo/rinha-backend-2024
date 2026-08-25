@@ -17,9 +17,9 @@ de recursos.
 
 ## Estado atual
 
-**Quatro implementações, doze experimentos. As três medidas passam na prova
-oficial com pontuação máxima; a quarta (Go) acabou de nascer e ainda não foi
-medida.**
+**Quatro implementações, doze experimentos. As quatro marcam USD 100.000 na
+prova oficial com zero inconsistências — mas a do Go, recém-nascida, entrega a
+pior cauda das quatro e ainda não passou pela bancada.**
 
 - [x] Documentação base (docs 01 a 05) e diário de aprendizados
 - [x] Modelo de domínio, endpoints e 177 testes automatizados (64 no Django,
@@ -45,8 +45,13 @@ medida.**
       [documento de abertura](./performance/go/00-indice.md) registra as
       previsões **antes** de medir — e já derruba a previsão do `GOMAXPROCS`
       com medição do runtime cru
-- [ ] Medir o Go: `just diag-prepared go` primeiro, depois bancada e prova
-      oficial
+- [x] Prova oficial do Go: **USD 100.000**, zero inconsistências, API a 227 µs
+      por requisição (a mais barata das quatro) — e **98,57% abaixo de 250ms**,
+      contra ~100% das outras três
+- [ ] **Explicar a cauda do Go**: 882 requisições acima de 250ms, todas nos 4
+      últimos segundos do teste. Quatro hipóteses com método em
+      [`performance/go/00-indice.md`](./performance/go/00-indice.md), seção 7.5
+- [ ] Bancada do Go: `just diag-prepared go` primeiro, depois as séries
 
 Resultado da configuração final em Django: **100% das requisições abaixo de
 250ms**, p98 de 7ms contra um SLA de 250ms, subida em ~20s contra um limite de
