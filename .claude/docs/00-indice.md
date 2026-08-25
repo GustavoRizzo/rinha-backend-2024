@@ -33,6 +33,10 @@ pontuação máxima.**
       [`performance/fastapi/`](./performance/fastapi/00-indice.md) — incluindo o
       [fechamento](./performance/fastapi/03-o-que-a-troca-de-framework-comprou.md),
       que separa o que a troca de framework comprou do que não comprou
+- [x] Terceira implementação em Elixir + Bandit + Postgrex: stack de pé em
+      1.50 CPU e 550MB, 24 testes verdes, smoke passando — **sem medição
+      ainda**. Vocabulário da linguagem e previsões registradas em
+      [`performance/elixir/`](./performance/elixir/00-indice.md)
 
 Resultado da configuração final em Django: **100% das requisições abaixo de
 250ms**, p98 de 7ms contra um SLA de 250ms, subida em ~20s contra um limite de
@@ -46,7 +50,10 @@ enxerga.
 - Variante com as 10 últimas transações em `JSONB` (hack M5, não implementada)
 - `synchronous_commit` como variável medida, não como decisão
 - bridge vs. host no Docker: impossível no Docker Desktop
-- Go e Elixir — previsões registradas em
+- **Medir o Elixir.** A implementação existe e passa no smoke; nenhuma série de
+  bancada foi rodada ainda. Previsões em
+  [`performance/elixir/`](./performance/elixir/00-indice.md), seção 4
+- Go — previsão registrada em
   [`performance/django/06`](./performance/django/06-tipos-de-worker.md), seção 8.
   A do FastAPI já foi conferida em
   [`performance/fastapi/01`](./performance/fastapi/01-fastapi-async.md): certa na

@@ -250,6 +250,36 @@ fa-sync:
     cd {{RAIZ}}/fastapi && uv sync
 
 # ==========================================================================
+# elixir — projeto Elixir + Bandit + Postgrex
+#
+# Ao contrário de `dj-*` e `fa-*`, estas receitas NÃO exigem a linguagem
+# instalada no host: tudo roda na mesma imagem que o Dockerfile usa para
+# compilar. Ver `scripts/elixir-teste.sh` para o porquê.
+# ==========================================================================
+
+# roda o ExUnit contra um Postgres descartável (sobe e derruba sozinho)
+[group('elixir')]
+ex-test *args:
+    @bash {{RAIZ}}/scripts/elixir-teste.sh test {{args}}
+
+# derruba o banco de teste, se um `ex-test` interrompido o tiver deixado de pé
+[group('elixir')]
+ex-db-down:
+    @bash {{RAIZ}}/scripts/elixir-teste.sh down
+
+# mix arbitrário dentro da imagem de build (ex: just ex mix deps.tree)
+[group('elixir')]
+ex +args:
+    docker run --rm -v {{RAIZ}}/elixir:/src -w /src -u "$(id -u):$(id -g)" \
+        -e HOME=/tmp hexpm/elixir:1.18.4-erlang-27.3.4-alpine-3.21.3 \
+        sh -c "mix local.hex --force >/dev/null && mix local.rebar --force >/dev/null && {{args}}"
+
+# atualiza mix.lock a partir de mix.exs
+[group('elixir')]
+ex-deps:
+    @just ex mix deps.get
+
+# ==========================================================================
 # bench — comparativos locais rápidos (SQLite, sem Docker, ferramenta: oha)
 #
 # NÃO confundir com `just load`, que roda o Gatling contra a stack completa.
@@ -393,6 +423,48 @@ bench-fa-01:
     # solta. Comparável com a série equivalente do Django no experimento 06.
     BENCH_ENDPOINT=transacoes \
         bash {{RAIZ}}/scripts/bench-stack.sh postgres-sem-limite 0 1 10s 5
+    just bench-tabela
+
+# uma série do Elixir atrás do nginx (variantes por variável de ambiente)
+[group('bench')]
+bench-ex endpoint="transacoes" cpus="0.40" duracao="10s" reps="5":
+    @BENCH_PROJETO=elixir BENCH_ENDPOINT={{endpoint}} \
+        bash {{RAIZ}}/scripts/bench-stack.sh postgres {{cpus}} 1 {{duracao}} {{reps}}
+
+# reproduz o experimento elixir/01: linha de base e as duas armadilhas da BEAM
+[group('bench')]
+bench-ex-01:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export BENCH_PROJETO=elixir
+    # Linha de base: as duas armadilhas corrigidas (1 scheduler, sem busy-wait),
+    # que é o padrão da stack. Comparável com as séries equivalentes do Django
+    # (`bench-06`) e do FastAPI (`bench-fa-01`): mesmo rig, mesma cota, mesmo
+    # endpoint, mesma duração.
+    for e in transacoes extrato; do
+        BENCH_ENDPOINT=$e bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+    done
+    # Armadilha 1 isolada: a BEAM se dimensionando pelos 20 núcleos VISÍVEIS,
+    # dentro de uma cota de 0.40 CPU.
+    SCHEDULERS=auto BENCH_ENDPOINT=transacoes \
+        bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+    # Armadilha 2 isolada: spin dos schedulers, cobrado pelo cgroup como CPU.
+    BUSY_WAIT=default BENCH_ENDPOINT=transacoes \
+        bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+    # As duas juntas: a porta ingênua, que é o que sairia sem este experimento.
+    SCHEDULERS=auto BUSY_WAIT=default BENCH_ENDPOINT=transacoes \
+        bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+    # Variantes de aplicação, uma por vez, contra a mesma linha de base.
+    EXTRATO_QUERY=duas BENCH_ENDPOINT=extrato \
+        bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+    JSON_LIB=otp BENCH_ENDPOINT=extrato \
+        bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+    # Sem cota: quanto a restrição está custando, e onde `SCHEDULERS=auto` deixa
+    # de ser armadilha e passa a ser a configuração natural.
+    for s in 1 auto; do
+        SCHEDULERS=$s BENCH_ENDPOINT=transacoes \
+            bash {{RAIZ}}/scripts/bench-stack.sh postgres-sem-limite 0 1 10s 5
+    done
     just bench-tabela
 
 # imprime a tabela comparativa das séries já executadas

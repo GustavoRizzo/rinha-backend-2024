@@ -1,0 +1,84 @@
+# Nome de projeto PRÓPRIO, distinto do da stack de produção E dos rigs dos
+# outros projetos: com o mesmo nome, o Compose trata os dois como o mesmo
+# projeto e tenta reconciliar — um container remanescente bloqueia a subida do
+# outro.
+name: rinha-backend-elixir-bench
+
+# Rig de bancada do Elixir: nginx + UMA API + Postgres.
+#
+# Espelho de `fastapi/compose.bench-postgres.yml`. Mesmas cotas padrão, mesmo
+# nginx, mesmo socket Unix, mesmo `postgresql.conf`, mesmo schema. UMA instância
+# de API de propósito: o que se mede aqui é o custo por requisição da aplicação,
+# e duas instâncias só dividiriam a carga.
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: rinha-bench-ex-db
+    environment:
+      - POSTGRES_DB=rinha
+      - POSTGRES_USER=rinha
+      - POSTGRES_PASSWORD=rinha
+    volumes:
+      - ../infra/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ../infra/sql:/docker-entrypoint-initdb.d:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U rinha -d rinha"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          cpus: "${DB_CPUS:-0.6}"
+          memory: "${DB_MEM:-200MB}"
+
+  api01:
+    build:
+      context: .
+    container_name: rinha-bench-ex-api01
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - BENCH_SEED=1
+      - DB_HOST=db
+      - BANDIT_BIND=unix:/sockets/api01.sock
+      - SCHEDULERS=${SCHEDULERS:-1}
+      - BUSY_WAIT=${BUSY_WAIT:-none}
+      - EXTRATO_QUERY=${EXTRATO_QUERY:-unica}
+      - JSON_LIB=${JSON_LIB:-jason}
+      - DB_POOL_MAX=${DB_POOL_MAX:-8}
+      # O rig replanta o histórico entre as repetições, então os saldos não
+      # voltam a zero na ordem em que a conferência espera.
+      - VERIFICAR_CLIENTES=0
+    volumes:
+      - sockets:/sockets
+    deploy:
+      resources:
+        limits:
+          cpus: "${API_CPUS:-0.45}"
+          memory: "${API_MEM:-150MB}"
+
+  nginx:
+    image: nginx:1.29-alpine
+    container_name: rinha-bench-ex-nginx
+    depends_on:
+      - api01
+    volumes:
+      - ../infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - sockets:/sockets
+    ports:
+      - "${LB_PORTA:-9999}:9999"
+    deploy:
+      resources:
+        limits:
+          cpus: "${LB_CPUS:-0.15}"
+          memory: "${LB_MEM:-32MB}"
+
+volumes:
+  sockets:
+
+networks:
+  default:
+    name: rinha-elixir-bench

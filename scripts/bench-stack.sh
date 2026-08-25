@@ -35,8 +35,16 @@ source "$PERFIL"
 
 ENDPOINT="${BENCH_ENDPOINT:-extrato}"
 # O servidor padrão é do PROJETO, não do script: o Django ganhou com gunicorn
-# sync (`django/06`), e o FastAPI não tem WSGI para servir.
-SERVIDOR="${BENCH_SERVER:-$([[ "$PROJETO" == "django" ]] && echo gunicorn-sync || echo uvicorn)}"
+# sync (`django/06`), o FastAPI não tem WSGI para servir, e o Elixir só tem
+# Bandit. Projeto sem padrão declarado ABORTA em vez de herdar o de outro — um
+# slug que mente sobre o servidor medido é pior que erro.
+case "$PROJETO" in
+    django)  SERVIDOR_PADRAO=gunicorn-sync ;;
+    fastapi) SERVIDOR_PADRAO=uvicorn ;;
+    elixir)  SERVIDOR_PADRAO=bandit ;;
+    *) echo "ABORTADO: projeto '$PROJETO' não tem servidor padrão declarado." >&2; exit 1 ;;
+esac
+SERVIDOR="${BENCH_SERVER:-$SERVIDOR_PADRAO}"
 THREADS="${BENCH_THREADS:-4}"
 PORTA="${LB_PORTA:-9999}"
 CONCORRENCIA="${BENCH_CONCORRENCIA:-50}"
