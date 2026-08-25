@@ -1,0 +1,160 @@
+{
+  "config": "go-postgres-nethttp-p1-qunica-extrato-cpu0.40-w1",
+  "endpoint": "extrato",
+  "duracao": "10s",
+  "modelo_de_carga": "fechado(saturacao)",
+  "concorrencia": 50,
+  "git_commit": "875022d",
+  "git_sujo": false,
+  "ferramenta": "oha 1.15.0",
+  "host": {
+    "cpus": 20,
+    "kernel": "6.6.87.2-microsoft-standard-WSL2",
+    "python": "3.14.6"
+  },
+  "banco": "postgres",
+  "repeticoes": 5,
+  "aquecimento_descartado": true,
+  "rps": {
+    "mediana": 2997.35,
+    "min": 2289.58,
+    "max": 3616.82,
+    "amplitude_pct": 44.28
+  },
+  "p50_ms": {
+    "mediana": 2.83,
+    "min": 2.74,
+    "max": 2.97,
+    "amplitude_pct": 8.2
+  },
+  "p99_ms": {
+    "mediana": 90.12,
+    "min": 84.76,
+    "max": 95.66,
+    "amplitude_pct": 12.1
+  },
+  "codigos": {
+    "200": 22850
+  },
+  "rps_por_repeticao": [
+    2289.6,
+    2394.4,
+    2997.4,
+    3095.5,
+    3616.8
+  ],
+  "cgroup": {
+    "cpu_usado_s": {
+      "mediana": 2.21,
+      "min": 2.05,
+      "max": 2.4,
+      "amplitude_pct": 16.15
+    },
+    "cpu_us_por_request": {
+      "mediana": 74.0,
+      "min": 66.5,
+      "max": 90.8,
+      "amplitude_pct": 32.84
+    },
+    "nr_throttled": {
+      "mediana": 0,
+      "min": 0,
+      "max": 1,
+      "amplitude_pct": 0.0
+    },
+    "throttled_ms": {
+      "mediana": 0.0,
+      "min": 0.0,
+      "max": 7.4,
+      "amplitude_pct": 0.0
+    },
+    "nr_periods": {
+      "mediana": 106,
+      "min": 105,
+      "max": 108,
+      "amplitude_pct": 2.83
+    },
+    "pct_periodos_throttlados": {
+      "mediana": 0.0,
+      "min": 0.0,
+      "max": 0.9,
+      "amplitude_pct": 0.0
+    }
+  },
+  "cgroup_nginx": {
+    "cpu_usado_s": {
+      "mediana": 1.57,
+      "min": 1.26,
+      "max": 1.58,
+      "amplitude_pct": 20.49
+    },
+    "cpu_us_por_request": {
+      "mediana": 52.3,
+      "min": 43.7,
+      "max": 56.4,
+      "amplitude_pct": 24.28
+    },
+    "nr_throttled": {
+      "mediana": 99,
+      "min": 11,
+      "max": 104,
+      "amplitude_pct": 93.94
+    },
+    "throttled_ms": {
+      "mediana": 7691.4,
+      "min": 627.2,
+      "max": 7924.9,
+      "amplitude_pct": 94.88
+    },
+    "nr_periods": {
+      "mediana": 109,
+      "min": 109,
+      "max": 109,
+      "amplitude_pct": 0.0
+    },
+    "pct_periodos_throttlados": {
+      "mediana": 90.8,
+      "min": 10.1,
+      "max": 95.4,
+      "amplitude_pct": 93.94
+    }
+  },
+  "cgroup_db": {
+    "cpu_usado_s": {
+      "mediana": 5.47,
+      "min": 5.07,
+      "max": 6.18,
+      "amplitude_pct": 20.26
+    },
+    "cpu_us_por_request": {
+      "mediana": 169.4,
+      "min": 151.4,
+      "max": 270.1,
+      "amplitude_pct": 70.07
+    },
+    "nr_throttled": {
+      "mediana": 26,
+      "min": 19,
+      "max": 102,
+      "amplitude_pct": 319.23
+    },
+    "throttled_ms": {
+      "mediana": 3924.3,
+      "min": 729.0,
+      "max": 58334.7,
+      "amplitude_pct": 1467.92
+    },
+    "nr_periods": {
+      "mediana": 107,
+      "min": 105,
+      "max": 110,
+      "amplitude_pct": 4.67
+    },
+    "pct_periodos_throttlados": {
+      "mediana": 24.8,
+      "min": 17.8,
+      "max": 93.6,
+      "amplitude_pct": 305.65
+    }
+  }
+}

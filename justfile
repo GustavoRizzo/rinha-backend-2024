@@ -141,6 +141,11 @@ score slug:
 diag slug:
     @python3 {{RAIZ}}/scripts/diagnostico.py {{RESULTADOS}}/{{slug}}
 
+# linhas de código por stack, separando documentação de implementação
+[group('analise')]
+codigo *args:
+    @python3 {{RAIZ}}/scripts/contar-codigo.py {{args}}
+
 # tabela comparativa entre variantes
 [group('analise')]
 compare +slugs:
@@ -550,6 +555,9 @@ bench-sem-cota:
             bash {{RAIZ}}/scripts/bench-stack.sh $rig 0 1 10s 5
         BENCH_PROJETO=elixir  BENCH_ENDPOINT=$e SCHEDULERS=auto \
             bash {{RAIZ}}/scripts/bench-stack.sh $rig 0 1 10s 5
+        # GOMAXPROCS=1: um processador lógico, o par do braço A das outras.
+        BENCH_PROJETO=go      BENCH_ENDPOINT=$e GOMAXPROCS=1 \
+            bash {{RAIZ}}/scripts/bench-stack.sh $rig 0 1 10s 5
     done
     # --- braço B: máquina inteira, dentro de max_connections=20 ---
     for e in transacoes extrato; do
@@ -561,6 +569,9 @@ bench-sem-cota:
             bash {{RAIZ}}/scripts/bench-stack.sh $rig 0 4 10s 5
         # 1 nó, schedulers automáticos, pool 16 = 16 conexões.
         BENCH_PROJETO=elixir  BENCH_ENDPOINT=$e SCHEDULERS=auto DB_POOL_MAX=16 \
+            bash {{RAIZ}}/scripts/bench-stack.sh $rig 0 1 10s 5
+        # GOMAXPROCS=auto (os 20 núcleos, sem cota) e pool 16, como o Elixir.
+        BENCH_PROJETO=go      BENCH_ENDPOINT=$e DB_POOL_MAX=16 \
             bash {{RAIZ}}/scripts/bench-stack.sh $rig 0 1 10s 5
     done
     just bench-tabela

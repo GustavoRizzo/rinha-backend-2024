@@ -1,0 +1,66 @@
+{
+  "variante": "go",
+  "timestamp": "2026-08-25T20:16:00-03:00",
+  "git_commit": "875022d",
+  "git_sujo": false,
+  "segundos_ate_pronta": 7,
+  "recursos": {
+    "api01": {
+      "cpus": 0.4,
+      "memory_mib": 100
+    },
+    "api02": {
+      "cpus": 0.4,
+      "memory_mib": 100
+    },
+    "db": {
+      "cpus": 0.6,
+      "memory_mib": 318
+    },
+    "nginx": {
+      "cpus": 0.1,
+      "memory_mib": 32
+    }
+  },
+  "gatling": "3.15.1",
+  "cgroup": {
+    "api01": {
+      "cpu_usado_s": 13.77,
+      "cpu_us_por_request": 223.8,
+      "nr_periods": 2383,
+      "nr_throttled": 0,
+      "throttled_ms": 0.0,
+      "pct_periodos_throttlados": 0.0
+    },
+    "api02": {
+      "cpu_usado_s": 14.15,
+      "cpu_us_por_request": 230.1,
+      "nr_periods": 2381,
+      "nr_throttled": 0,
+      "throttled_ms": 0.0,
+      "pct_periodos_throttlados": 0.0
+    },
+    "db": {
+      "cpu_usado_s": 18.78,
+      "cpu_us_por_request": 305.3,
+      "nr_periods": 2420,
+      "nr_throttled": 2,
+      "throttled_ms": 58.0,
+      "pct_periodos_throttlados": 0.1
+    },
+    "nginx": {
+      "cpu_usado_s": 10.89,
+      "cpu_us_por_request": 177.1,
+      "nr_periods": 2387,
+      "nr_throttled": 9,
+      "throttled_ms": 145.4,
+      "pct_periodos_throttlados": 0.4
+    },
+    "_total_requisicoes": 61503
+  },
+  "host": {
+    "cpus": 20,
+    "kernel": "6.6.87.2-microsoft-standard-WSL2",
+    "docker": "29.6.2"
+  }
+}
