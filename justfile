@@ -485,6 +485,8 @@ bench-ex-01:
 # um nó usa a máquina inteira sozinho. O que muda entre os braços dele é só o
 # pool, e é isso que o slug registra (`-pool16`). Passar `w4` para o Elixir
 # produziria um slug que mente sobre o que subiu.
+
+# as TRÊS stacks sem limitação de hardware, em 20 vCPU (experimento elixir/03)
 [group('bench')]
 bench-sem-cota:
     #!/usr/bin/env bash
