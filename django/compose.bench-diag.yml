@@ -1,0 +1,19 @@
+# Override de DIAGNÓSTICO: liga o pg_stat_statements no banco do rig.
+#
+# Existe por uma ação decorrente de `performance/elixir/04`, aberta desde então:
+# o Django executa SQL cru com psycopg e **ninguém conferiu se ele reusa
+# prepared statements**. Se não reusar, parte dos 862 µs da escrita e dos
+# 1258 µs da leitura é o mesmo problema que custou 3,97x de CPU de banco ao
+# Elixir — e o Django estaria sendo o pior das quatro stacks por um motivo que
+# não é o Django.
+#
+# Ao contrário dos outros três rigs de diagnóstico, este NÃO monta `infra/sql`:
+# no projeto Django o schema vem das migrations, aplicadas pelo entrypoint.
+#
+# FORA da metodologia de medição: o próprio pg_stat_statements custa CPU. Nada
+# medido com este override entra em `resultados/`.
+services:
+  db:
+    volumes:
+      - ../infra/postgres/postgresql-diag.conf:/etc/postgresql/postgresql-diag.conf:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql-diag.conf

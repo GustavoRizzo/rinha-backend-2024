@@ -15,15 +15,16 @@
 # FORA da metodologia de medição: o pg_stat_statements tem custo próprio, e
 # nada daqui entra em `resultados/`. É diagnóstico, não benchmark.
 #
-# Uso: diag-prepared.sh <elixir|fastapi|go> [endpoint]
+# Uso: diag-prepared.sh <django|elixir|fastapi|go> [endpoint]
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJETO="${1:?uso: diag-prepared.sh <elixir|fastapi|go> [extrato|transacoes]}"
+PROJETO="${1:?uso: diag-prepared.sh <django|elixir|fastapi|go> [extrato|transacoes]}"
 ENDPOINT="${2:-extrato}"
 DURACAO="${DIAG_DURACAO:-10s}"
 
 case "$PROJETO" in
+    django)  DB=rinha-bench-db ;;
     elixir)  DB=rinha-bench-ex-db ;;
     fastapi) DB=rinha-bench-fa-db ;;
     go)      DB=rinha-bench-go-db ;;
