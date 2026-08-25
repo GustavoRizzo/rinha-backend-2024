@@ -57,7 +57,7 @@ subir, ele não era a parede.
 
 | Item | Valor |
 | - | - |
-| Commit | `1997e19` (diagnóstico) e `420c644` (repartições) |
+| Commit | `1997e19` (diagnóstico), `420c644` (repartições), `PROVA` (provas oficiais) |
 | Host | 20 vCPU, 31GB, kernel 6.6.87.2-microsoft-standard-WSL2 |
 | Gerador de carga | `oha` 1.15.0, 10s, 5 repetições, aquecimento descartado, concorrência 50 |
 | Aplicação | FastAPI 0.141.1 + uvicorn 0.52.4 (uvloop/httptools) + asyncpg 0.31.0 |
@@ -220,7 +220,53 @@ req/s de extrato — **97% da carga é escrita**. Pelo critério da competição
 e a combinação das duas melhorias é uma hipótese não testada — não uma
 recomendação.
 
-### 5.4 Nada disso muda a pontuação
+### 5.4 A prova oficial RECUSOU a repartição que a bancada elegeu
+
+Este é o achado mais importante do experimento, e ele contradiz a seção 5.1.
+
+Adotei `r-maisbanco` como padrão (banco 0.80, APIs 0.30 cada) e rodei a
+simulação oficial. **Duas execuções**, para não concluir de uma só:
+
+| | banco 0.60, APIs 0.40 | banco 0.80, APIs 0.30 | banco 0.80, APIs 0.30 |
+| - | - | - | - |
+| execução | `20260824T144338` | `20260825T001412` | `20260825T001929` |
+| abaixo de 250ms | **100,000%** | 99,961% | 99,961% |
+| requisições acima de 250ms | **0** | **24** | **24** |
+| p98 | **5 ms** | 6 ms | 6 ms |
+| p99 | **6 ms** | 8 ms | 9 ms |
+| máximo | **246 ms** | 315 ms | 340 ms |
+| pontuação | 100.000 | 100.000 | 100.000 |
+
+A repartição que rende **1,54x na bancada** entrega uma cauda **pior** na carga
+real. E não é ruído: as duas execuções deram exatamente **24** requisições acima
+do SLA — número idêntico, o que aponta para causa sistemática, não dispersão.
+
+**Por que as duas medições discordam.** Elas respondem perguntas diferentes:
+
+| | `oha` | Gatling |
+| - | - | - |
+| pergunta | quanto cabe? | como se comporta no que chega? |
+| carga | **saturação** (concorrência 50, sem folga) | ~340 req/s, o que a Rinha aplica |
+| métrica | vazão e CPU por requisição | percentis de latência |
+
+Sob saturação, cota parada nas APIs é desperdício e o banco é a parede. Sob 340
+req/s, **nada satura** — e aí a folga das APIs deixa de ser desperdício e passa
+a ser o que absorve os picos. Tirar 0.20 CPU delas não custou vazão (que sobra),
+custou cauda (que é o que o SLA mede).
+
+**Decisão: o padrão volta para banco 0.60 e APIs 0.40 cada.** A repartição
+`r-maisbanco` fica documentada como a escolha certa para quem for limitado por
+vazão — que a Rinha não é.
+
+**Regra derivada**: *otimização medida em saturação não se transfere
+automaticamente para a carga real.* Se o sistema não satura no uso previsto, a
+folga não é desperdício: é o amortecedor da cauda. Vale além deste projeto.
+
+**O que ficou por investigar**: as 24 requisições, idênticas nas duas execuções.
+Número reprodutível é mecanismo, não dispersão — provavelmente a fase de subida
+da rampa. Não foi caçado.
+
+### 5.5 Nada disso muda a pontuação
 
 O pico da simulação é **~340 req/s**. A pior repartição medida aqui entrega
 **664 rps de escrita** — quase o dobro do pico, medindo só escrita, com uma
@@ -232,23 +278,57 @@ descobrir que ela se mudou de lugar quando a aplicação ficou mais barata.
 
 ---
 
-## 6. Ações decorrentes
+## 6. A melhor execução do projeto
+
+Para quem quiser citar um número só, é este — e é o da repartição **antiga**,
+que a prova oficial preferiu:
+
+> **`resultados/fastapi/20260824T144338`** — FastAPI + uvicorn + asyncpg, nginx
+> + 2 APIs + Postgres em **1.50 CPU e 550MB**:
+>
+> | | |
+> | - | - |
+> | Pontuação | **USD 100.000** (máxima) |
+> | Requisições | 61.503 em 4 minutos |
+> | Abaixo de 250ms | **100,000%** — nenhuma exceção |
+> | p50 / p98 / p99 | **2ms / 5ms / 6ms** |
+> | Máximo | 246 ms |
+> | Inconsistências de saldo | **zero** |
+> | Requisições com falha | **zero** |
+> | Subida da stack | **7s** (limite: 40s) |
+> | Commit | `2fad4bb` |
+
+**As ressalvas que precisam viajar junto com esses números**, porque sem elas
+eles enganam:
+
+1. **A pontuação satura.** A stack Django também marca USD 100.000. O SLA exige
+   98% abaixo de 250ms e o p98 ficou em 5ms — **50x de folga**. Nesse regime,
+   qualquer implementação competente tira nota máxima, e comparar notas não diz
+   nada. É por isso que este projeto usa o `oha` para comparar e o Gatling só
+   para aprovar.
+2. **O máximo de 246ms encostou no limite.** O SLA é 250ms; uma requisição
+   passou a 4ms de custar dinheiro. As execuções em Django tiveram máximos
+   melhores (76ms e 94ms). "100% abaixo de 250ms" é verdade e é apertado.
+3. **A máquina é mais folgada que a oficial**: 20 vCPU contra 4, e aqui o
+   gerador de carga não disputa CPU com a aplicação. **Estes números não são
+   comparáveis com o ranking oficial da Rinha.**
+4. **A competição encerrou em março de 2024.** Isto é um exercício de estudo,
+   não uma submissão.
+
+## 7. Ações decorrentes
 
 - [x] Rig `producao` (2 APIs) com **trava de orçamento**: repartição que estoura
       1.5 CPU ou 550MB aborta em vez de virar linha de tabela.
 - [x] Bancada coleta o cgroup do banco e soma os das duas APIs.
-- [ ] **Adotar `r-maisbanco` como padrão** (nginx 0.10, API 0.30 × 2, banco
-      0.80) e rodar a prova oficial para confirmar que nada regride.
+- [x] **`r-maisbanco` testado na prova oficial e REJEITADO**: 1,54x na bancada,
+      cauda pior na carga real, em duas execuções. O padrão fica em banco 0.60 e
+      APIs 0.40.
 - [ ] Medir a repartição mista (nginx 0.20, API 0.30 × 2, banco 0.70), que
       combina os dois ganhos e não foi testada.
 - [ ] Investigar a amplitude de 27,9% na leitura com `r-atual`. Amplitude alta
       não é ruído a mediar: é mecanismo a encontrar.
+- [ ] Caçar as **24 requisições** acima de 250ms, idênticas nas duas execuções
+      com banco 0.80. Número reprodutível é mecanismo.
 - [ ] Repetir a varredura de repartições no **Django**: se o gargalo dele ainda
       é a aplicação, a repartição ótima é outra — e isso testaria se `r-atual`
       é de fato a melhor para ele, ou só a que foi encontrada primeiro.
-
----
-
-## 5. Conclusões
-
-PREENCHER

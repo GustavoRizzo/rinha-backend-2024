@@ -40,14 +40,21 @@ services:
     deploy:
       resources:
         limits:
-          # 0.80, e não os 0.60 herdados do Django: o experimento 02 mediu a
-          # repartição do Django congelando o banco em 93,5% dos períodos
-          # enquanto as APIs não congelavam em NENHUM. Mover 0.20 CPU das APIs
-          # para o banco rende 1,54x na escrita — que é 97% da carga da Rinha.
+          # 0.60, e NÃO os 0.80 que a bancada elegeu. O experimento 02 mediu
+          # 1,54x mais escritas com banco 0.80 — e a prova oficial recusou a
+          # troca: duas execuções, as duas com 24 requisições acima de 250ms e
+          # o máximo indo de 246ms para 315 e 340ms.
+          #
+          # O motivo é a diferença entre as duas perguntas: o `oha` mede em
+          # SATURAÇÃO, e a Rinha aplica ~340 req/s — longe de saturar. Nessa
+          # carga, tirar cota das APIs não custa vazão (que sobra), custa
+          # latência de cauda — que é exatamente o que o SLA mede.
+          #
+          # Ver `performance/fastapi/02`, seção 5.5.
           #
           # Sem nenhuma variável definida a soma é exatamente 1.50 CPU / 550MB;
           # confira com `just check fastapi`.
-          cpus: "${DB_CPUS:-0.80}"
+          cpus: "${DB_CPUS:-0.60}"
           memory: "318MB"
 
   api01: &api
@@ -78,10 +85,10 @@ services:
     deploy:
       resources:
         limits:
-          # 0.30 por instância (0.60 somando as duas). O que sobra aqui vai
-          # para o banco: com a API do FastAPI custando 1,73x menos CPU por
-          # escrita, 0.40 era cota parada. Ver `performance/fastapi/02`.
-          cpus: "${API_CPUS:-0.30}"
+          # 0.40 por instância. Parece cota parada — sob a carga da Rinha as
+          # APIs mal congelam — mas é essa folga que segura a cauda. Ver o
+          # comentário da cota do banco.
+          cpus: "${API_CPUS:-0.40}"
           memory: "100MB"
 
   api02:

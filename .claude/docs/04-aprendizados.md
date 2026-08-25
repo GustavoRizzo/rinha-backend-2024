@@ -373,6 +373,18 @@ aparece em relatório técnico.
   2,6% — dentro do ruído. Ele saturava a própria cota sem ser o limite do
   sistema. Medido em `performance/fastapi/02`.
 
+- **"Mover 0.20 CPU das APIs para o banco melhora a stack."** Medido: 1,54x mais
+  escritas na bancada. E recusado pela prova oficial, em duas execuções — 24
+  requisições acima do SLA nas duas, e o máximo indo de 246ms para 315 e 340ms.
+  A bancada mede em SATURAÇÃO; a Rinha aplica ~340 req/s e não satura nada.
+  Registrado em `performance/fastapi/02`, seção 5.4.
+
+**Regra derivada**: **otimização medida em saturação não se transfere
+automaticamente para a carga real.** Se o sistema não satura no uso previsto, a
+folga não é desperdício: é o amortecedor da cauda. As duas ferramentas deste
+projeto respondem perguntas diferentes — o `oha` responde "quanto cabe", o
+Gatling responde "como se comporta no que chega" — e a segunda é quem decide.
+
 **Regra derivada**: **throttling alto não prova gargalo.** A porcentagem de
 períodos congelados diz que um serviço satura a *sua* cota, não que ele seja a
 parede. A prova é operacional: solte a cota daquele serviço e veja se a vazão

@@ -1,0 +1,31 @@
+{
+  "variante": "fastapi",
+  "timestamp": "2026-08-25T00:14:12-03:00",
+  "git_commit": "500e8f9",
+  "git_sujo": false,
+  "segundos_ate_pronta": 7,
+  "recursos": {
+    "api01": {
+      "cpus": 0.3,
+      "memory_mib": 100
+    },
+    "api02": {
+      "cpus": 0.3,
+      "memory_mib": 100
+    },
+    "db": {
+      "cpus": 0.8,
+      "memory_mib": 318
+    },
+    "nginx": {
+      "cpus": 0.1,
+      "memory_mib": 32
+    }
+  },
+  "gatling": "3.15.1",
+  "host": {
+    "cpus": 20,
+    "kernel": "6.6.87.2-microsoft-standard-WSL2",
+    "docker": "29.6.2"
+  }
+}

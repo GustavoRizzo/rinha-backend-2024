@@ -30,6 +30,36 @@ de USD 100.000. O que separa as duas implementações é o teto de vazão: 1,73x
 escrita e 4,00x na leitura, medidos em
 [`performance/fastapi/01`](./.claude/docs/performance/fastapi/01-fastapi-async.md).
 
+### A melhor execução
+
+> **`resultados/fastapi/20260824T144338`** — FastAPI + uvicorn + asyncpg;
+> nginx + 2 APIs + Postgres em **1.50 CPU e 550MB**, o orçamento inteiro.
+>
+> | | |
+> | - | - |
+> | Pontuação | **USD 100.000** (máxima) |
+> | Requisições | 61.503 em 4 minutos |
+> | Abaixo de 250ms | **100,000%** — nenhuma exceção |
+> | p50 / p98 / p99 | **2ms / 5ms / 6ms** (SLA: p98 < 250ms) |
+> | Máximo | 246 ms |
+> | Inconsistências de saldo | **zero** |
+> | Requisições com falha | **zero** |
+> | Subida da stack | **7s** (limite: 40s) |
+
+Quatro ressalvas que precisam andar junto com esses números:
+
+1. **A pontuação satura** — a stack Django também marca USD 100.000. Com p98 de
+   5ms contra um SLA de 250ms são **50x de folga**, e nesse regime qualquer
+   implementação competente tira nota máxima. É por isso que aqui o `oha`
+   compara e o Gatling só aprova.
+2. **O máximo de 246ms encostou no limite** de 250ms — uma requisição passou a
+   4ms de custar dinheiro. As execuções em Django tiveram máximos melhores
+   (76ms e 94ms).
+3. **A máquina é mais folgada que a oficial** (20 vCPU contra 4, e o gerador de
+   carga não disputa CPU com a aplicação): **estes números não são comparáveis
+   com o ranking oficial**.
+4. **A competição encerrou em março de 2024.** Isto é um exercício de estudo.
+
 Relatórios navegáveis do Gatling em [`resultados/`](./resultados/).
 
 ## O desafio, em uma tela
@@ -98,6 +128,7 @@ números, o commit exato medido e os comandos para replicar.
 | [05](./.claude/docs/performance/django/05-stack-completa-gatling.md) | Stack completa + Gatling | A cauda era throttling, e a cota estava no serviço errado |
 | [06](./.claude/docs/performance/django/06-tipos-de-worker.md) | Tipos de worker | O Gatling **satura**: `sync` e `gthread` tiram a mesma nota com 59% de diferença de vazão |
 | [fastapi/01](./.claude/docs/performance/fastapi/01-fastapi-async.md) | FastAPI + asyncpg | A previsão acertou na escrita (1,73x) e **subestimou a leitura (4,00x)**: o ORM estava no caminho quente do extrato |
+| [fastapi/02](./.claude/docs/performance/fastapi/02-onde-esta-o-gargalo.md) | Onde está o gargalo | Uma repartição **1,54x melhor na bancada** entregou cauda **pior** na prova oficial — a bancada mede saturação, a Rinha não satura |
 
 Material de apoio em [`.claude/docs/`](./.claude/docs/):
 
