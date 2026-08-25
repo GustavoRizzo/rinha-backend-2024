@@ -368,6 +368,24 @@ aparece em relatório técnico.
   **4,00x**, muito acima da faixa prevista. A diferença entre os dois números é
   o tamanho do ORM no endpoint que eu não olhei.
 
+- **"A BEAM sobe um scheduler por núcleo VISÍVEL, e `SCHEDULERS=auto` seria
+  armadilha sob cota."** Falso no OTP 27: ele lê a cota do cgroup e sobe 1
+  scheduler com `--cpus=0.40`, 2 com 2 CPU, 4 com 4 — enxergando 20 núcleos o
+  tempo todo. Os quatro braços do teste ficaram dentro de 2,2%, abaixo do ruído.
+  A armadilha existe, mas só **sem** cota: lá `auto` custa 2,16x mais CPU por
+  requisição para 4,4% mais vazão. Medido em `performance/elixir/01`.
+- **"Sob cgroup, o busy-wait dos schedulers da BEAM custa mais que schedulers
+  demais."** Aposta própria, registrada antes de medir, e **errada**: 0,4% de
+  diferença. O raciocínio ("spin queima cota, e queimar não é de graça") estava
+  certo; faltava a premissa de que **com 1 scheduler não há para quem esperar**,
+  e a própria BEAM já tinha reduzido para 1 ao ler a cota. Medido em
+  `performance/elixir/01`.
+- **"Elixir custaria 150–400 µs por requisição, 2 a 6x menos que o Django."**
+  Medido: 548,5 µs e 1,57x — fora da faixa, e **9,8% mais caro que o FastAPI**,
+  que a mesma previsão colocava atrás dele. Terceira previsão de
+  `performance/django/06`, seção 8, e a segunda a errar a leitura: 394,6 µs
+  contra 314,3 do FastAPI, 25,6% pior.
+
 - **"O nginx virou o gargalo da leitura."** Afirmado a partir de 87–93% de
   períodos congelados no cgroup dele. Soltar a cota de 0.15 para 0.40 rendeu
   2,6% — dentro do ruído. Ele saturava a própria cota sem ser o limite do
@@ -389,6 +407,20 @@ Gatling responde "como se comporta no que chega" — e a segunda é quem decide.
 períodos congelados diz que um serviço satura a *sua* cota, não que ele seja a
 parede. A prova é operacional: solte a cota daquele serviço e veja se a vazão
 sobe. Se não subir, ele não era o gargalo.
+
+**Regra derivada**: **verificar a VERSÃO do runtime é parte da metodologia.**
+Uma armadilha real de uma linguagem pode já ter sido resolvida na versão que
+está rodando. `os.cpu_count()` não enxerga o cgroup; o OTP 27 enxerga. Tratar o
+comportamento de um runtime como universal foi o que produziu a previsão errada
+sobre a BEAM — e é o que precisa ser conferido no fonte antes de repetir a
+previsão do `GOMAXPROCS` para o Go.
+
+**Regra derivada**: **quando o gargalo muda de serviço, a comparação anterior
+deixa de valer.** Duas linhas com o mesmo endpoint e a mesma cota podem estar
+medindo coisas diferentes: no extrato com query única, a API do Elixir fica
+ociosa e o banco satura, enquanto no FastAPI é o contrário. Olhar
+`nr_throttled` **por serviço** antes de dividir os números é o que evita a
+conclusão errada.
 
 **Regra derivada**: **"o caminho quente" não é um lugar só.** Uma afirmação
 verificada num endpoint não vale no outro sem verificar de novo. Este sistema

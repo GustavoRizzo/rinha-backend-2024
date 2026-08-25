@@ -1,10 +1,10 @@
 # Rinha de Backend 2024/Q1 — laboratório de estudo
 
-Duas implementações da [Rinha de Backend 2024/Q1](https://github.com/zanfranceschi/rinha-de-backend-2024-q1)
-— **Django** e **FastAPI** — com **sete experimentos de desempenho** medindo
-cada decisão de arquitetura sob as restrições da competição.
+Três implementações da [Rinha de Backend 2024/Q1](https://github.com/zanfranceschi/rinha-de-backend-2024-q1)
+— **Django**, **FastAPI** e **Elixir** — com **nove experimentos de desempenho**
+medindo cada decisão de arquitetura sob as restrições da competição.
 
-As duas marcam a pontuação máxima. A comparação interessante não é essa: é o
+As três marcam a pontuação máxima. A comparação interessante não é essa: é o
 **custo em CPU por requisição**, que a pontuação não enxerga porque satura.
 
 A competição encerrou em março de 2024. **Este repositório não é uma submissão** —
@@ -13,21 +13,27 @@ limitação de recursos, usando as regras da Rinha como especificação.
 
 ## Resultado
 
-| | Django | FastAPI |
-| - | - | - |
-| Pontuação | **USD 100.000** (9 execuções) | **USD 100.000** |
-| Requisições abaixo de 250ms | 100% (SLA exige 98%) | 100% |
-| p98 | 7ms (SLA exige < 250ms) | 5ms |
-| Inconsistências de saldo | zero em +550 mil requisições | zero |
-| Subida da stack | ~20s (limite: 40s) | 7s |
-| Recursos | 1.50 CPU e 550MB | 1.50 CPU e 550MB |
-| **CPU por requisição, escrita** | 862 µs | **500 µs** |
-| **CPU por requisição, leitura** | 1258 µs | **314 µs** |
+| | Django | FastAPI | Elixir |
+| - | - | - | - |
+| Pontuação | **USD 100.000** (9 execuções) | **USD 100.000** | **USD 100.000** |
+| Requisições abaixo de 250ms | 100% (SLA exige 98%) | 100% | 100% |
+| p98 | 7ms (SLA exige < 250ms) | 5ms | 6ms |
+| Máximo | 76–94ms | 246ms | 101ms |
+| Inconsistências de saldo | zero em +550 mil requisições | zero | zero |
+| Subida da stack | ~20s (limite: 40s) | 7s | **4s** |
+| Recursos | 1.50 CPU e 550MB | 1.50 CPU e 550MB | 1.50 CPU e 550MB |
+| **CPU por requisição, escrita** | 862 µs | **500 µs** | 549 µs |
+| **CPU por requisição, leitura** | 1258 µs | **314 µs** | 395 µs |
 
-**A pontuação satura e as duas colunas empatam nela.** Com 35x a 50x de folga
+> A coluna do Elixir é a que mais contraria a expectativa registrada: a previsão
+> escrita em 2026-08-22 o colocava **à frente** do FastAPI, e ele ficou 9,8%
+> atrás na escrita e 25,6% atrás na leitura. Ver
+> [`performance/elixir/01`](./.claude/docs/performance/elixir/01-a-beam-sob-cota.md).
+
+**A pontuação satura e as três colunas empatam nela.** Com 35x a 50x de folga
 contra o SLA, toda configuração razoável marca o teto — não existe nota acima
-de USD 100.000. O que separa as duas implementações é o teto de vazão: 1,73x na
-escrita e 4,00x na leitura, medidos em
+de USD 100.000. O que separa as implementações é o teto de vazão: 1,73x na
+escrita e 4,00x na leitura entre Django e FastAPI, medidos em
 [`performance/fastapi/01`](./.claude/docs/performance/fastapi/01-fastapi-async.md).
 
 ### A melhor execução
@@ -129,6 +135,8 @@ números, o commit exato medido e os comandos para replicar.
 | [06](./.claude/docs/performance/django/06-tipos-de-worker.md) | Tipos de worker | O Gatling **satura**: `sync` e `gthread` tiram a mesma nota com 59% de diferença de vazão |
 | [fastapi/01](./.claude/docs/performance/fastapi/01-fastapi-async.md) | FastAPI + asyncpg | A previsão acertou na escrita (1,73x) e **subestimou a leitura (4,00x)**: o ORM estava no caminho quente do extrato |
 | [fastapi/02](./.claude/docs/performance/fastapi/02-onde-esta-o-gargalo.md) | Onde está o gargalo | Uma repartição **1,54x melhor na bancada** entregou cauda **pior** na prova oficial — a bancada mede saturação, a Rinha não satura |
+| [fastapi/03](./.claude/docs/performance/fastapi/03-o-que-a-troca-de-framework-comprou.md) | O que a troca de framework comprou | Fechamento do projeto: o que foi medido, o que foi suposto, e o que a próxima linguagem precisa manter idêntico |
+| [elixir/01](./.claude/docs/performance/elixir/01-a-beam-sob-cota.md) | A BEAM sob cota de cgroup | As duas armadilhas previstas **não aparecem**: o OTP 27 lê a cota e se dimensiona sozinho. Sem cota, elas custam **2,16x** |
 | [fastapi/03](./.claude/docs/performance/fastapi/03-o-que-a-troca-de-framework-comprou.md) | Fechamento | O ganho que dá para atribuir ao framework é **1,73x**, não 4x: o resto era **ORM no caminho quente**, e isso o Django também poderia ter tirado |
 
 Material de apoio em [`.claude/docs/`](./.claude/docs/):
@@ -152,6 +160,7 @@ just doctor       # confere tudo de uma vez
 
 - Docker Engine + Compose v2
 - [`just`](https://github.com/casey/just), [`uv`](https://docs.astral.sh/uv/), JDK 17+
+  (Erlang/Elixir **não** são necessários: o projeto `elixir/` compila e testa em container)
 - [`oha`](https://github.com/hatoo/oha) para os comparativos rápidos: `cargo install oha`
 - O Gatling **não precisa ser instalado**: o projeto Maven em [`gatling/`](./gatling/) traz tudo
 
@@ -202,7 +211,14 @@ just dj-setup     # dependências, schema e os 5 clientes
 just dj-test      # 64 testes
 just dj-serve     # servidor de desenvolvimento
 just gen-sql      # regenera infra/sql/ a partir do modelo e da fixture
+
+just fa-test      # 50 testes do FastAPI
+just ex-test      # 24 testes do Elixir (não exige Elixir instalado no host)
 ```
+
+O projeto Elixir roda tudo em container, inclusive os testes: `just ex-test`
+sobe um Postgres descartável e executa o ExUnit na **mesma imagem** que o
+Dockerfile usa para compilar. Não é preciso instalar Erlang nem Elixir.
 
 ## Estrutura
 
@@ -211,7 +227,8 @@ just gen-sql      # regenera infra/sql/ a partir do modelo e da fixture
 ├─ .claude/docs/              documentação de estudo
 │  └─ performance/            um diretório por projeto, um arquivo por experimento
 │     ├─ django/              experimentos 01 a 06
-│     └─ fastapi/             experimento 01
+│     ├─ fastapi/             experimentos 01 a 03
+│     └─ elixir/              experimento 01
 ├─ django/                    implementação em Django + Gunicorn + psycopg
 │  ├─ crebitos/               modelo, views, testes, hacks isolados
 │  ├─ docker-compose.yml      a stack da competição

@@ -5,7 +5,7 @@ experimento 01 do Elixir **não** é continuação do 03 do FastAPI.
 
 | # | Experimento | Data | Estado |
 | - | - | - | - |
-| 01 | Elixir + Bandit + Postgrex: a BEAM sob cota de cgroup | — | **stack de pé, sem medição** |
+| [01](./01-a-beam-sob-cota.md) | A BEAM sob cota: as duas armadilhas **não aparecem**, e o Elixir ficou **mais caro que o FastAPI**; USD 100.000 | 2026-08-25 | **concluído** |
 
 ## Por que este projeto existe
 

@@ -17,12 +17,12 @@ de recursos.
 
 ## Estado atual
 
-**Duas implementações, sete experimentos, as duas passando na prova oficial com
+**Três implementações, nove experimentos, as três passando na prova oficial com
 pontuação máxima.**
 
 - [x] Documentação base (docs 01 a 05) e diário de aprendizados
-- [x] Modelo de domínio, endpoints e 114 testes automatizados (64 no Django,
-      50 no FastAPI)
+- [x] Modelo de domínio, endpoints e 138 testes automatizados (64 no Django,
+      50 no FastAPI, 24 no Elixir)
 - [x] Stack completa: nginx + 2 APIs Django/Gunicorn + Postgres, em 1.50 CPU e 550MB
 - [x] Ferramental: `oha` 1.15.0 (comparativos rápidos) e Gatling 3.15.1 (prova oficial)
 - [x] Scripts de ciclo, bancada, pontuação e validação de limites
@@ -33,16 +33,19 @@ pontuação máxima.**
       [`performance/fastapi/`](./performance/fastapi/00-indice.md) — incluindo o
       [fechamento](./performance/fastapi/03-o-que-a-troca-de-framework-comprou.md),
       que separa o que a troca de framework comprou do que não comprou
-- [x] Terceira implementação em Elixir + Bandit + Postgrex: stack de pé em
-      1.50 CPU e 550MB, 24 testes verdes, smoke passando — **sem medição
-      ainda**. Vocabulário da linguagem e previsões registradas em
-      [`performance/elixir/`](./performance/elixir/00-indice.md)
+- [x] Terceira implementação em Elixir + Bandit + Postgrex: **USD 100.000**,
+      zero inconsistências, subida em 4s, e o experimento
+      [`performance/elixir/01`](./performance/elixir/01-a-beam-sob-cota.md) —
+      as duas armadilhas previstas da BEAM **não aparecem sob cota**, e o
+      Elixir ficou **mais caro que o FastAPI**, ao contrário do previsto
 
 Resultado da configuração final em Django: **100% das requisições abaixo de
 250ms**, p98 de 7ms contra um SLA de 250ms, subida em ~20s contra um limite de
 40s. O FastAPI repete a pontuação com p98 de 5ms, e custa **1,73x menos CPU na
 escrita e 4,00x menos na leitura** — diferença que a pontuação, saturada, não
-enxerga.
+enxerga. O Elixir repete a pontuação com p98 de 6ms e a subida mais rápida das
+três (4s), mas fica **entre os dois** em custo por requisição: 1,57x melhor que
+o Django e 9,8% pior que o FastAPI.
 
 ### O que ficou em aberto
 
@@ -50,9 +53,9 @@ enxerga.
 - Variante com as 10 últimas transações em `JSONB` (hack M5, não implementada)
 - `synchronous_commit` como variável medida, não como decisão
 - bridge vs. host no Docker: impossível no Docker Desktop
-- **Medir o Elixir.** A implementação existe e passa no smoke; nenhuma série de
-  bancada foi rodada ainda. Previsões em
-  [`performance/elixir/`](./performance/elixir/00-indice.md), seção 4
+- **Os 479 µs de CPU de banco do Elixir** contra 177 µs do FastAPI, para o SQL
+  idêntico. É o achado em aberto de
+  [`performance/elixir/01`](./performance/elixir/01-a-beam-sob-cota.md), seção 5.4
 - Go — previsão registrada em
   [`performance/django/06`](./performance/django/06-tipos-de-worker.md), seção 8.
   A do FastAPI já foi conferida em
