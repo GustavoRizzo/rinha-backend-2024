@@ -467,6 +467,52 @@ bench-ex-01:
     done
     just bench-tabela
 
+# reproduz o experimento elixir/03: as TRÊS stacks sem limitação de hardware
+#
+# Fora do regulamento de propósito. Dois braços, porque "sem limitação" quer
+# dizer duas coisas diferentes numa máquina de 20 núcleos:
+#
+#   A) 1 processo cada — mede quanto o RUNTIME paraleliza sozinho. Desfavorável
+#      ao Python por construção: 1 processo CPython usa 1 núcleo, 1 nó da BEAM
+#      usa os 20.
+#   B) máquina inteira — cada stack configurada como alguém a subiria de fato.
+#
+# A restrição dura é `max_connections = 20` no `postgresql.conf`, compartilhado
+# pelas três stacks: mudá-lo invalidaria todos os experimentos anteriores. Por
+# isso o braço B para em 4 workers e pool 4.
+#
+# O Elixir recebe `workers=1` nos DOIS braços porque a BEAM não tem esse botão:
+# um nó usa a máquina inteira sozinho. O que muda entre os braços dele é só o
+# pool, e é isso que o slug registra (`-pool16`). Passar `w4` para o Elixir
+# produziria um slug que mente sobre o que subiu.
+[group('bench')]
+bench-sem-cota:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    rig=postgres-sem-limite
+    # --- braço A: 1 processo cada ---
+    for e in transacoes extrato; do
+        BENCH_PROJETO=django  BENCH_SERVER=gunicorn-sync BENCH_ENDPOINT=$e \
+            bash {{RAIZ}}/scripts/bench-stack.sh $rig 0 1 10s 5
+        BENCH_PROJETO=fastapi BENCH_ENDPOINT=$e \
+            bash {{RAIZ}}/scripts/bench-stack.sh $rig 0 1 10s 5
+        BENCH_PROJETO=elixir  BENCH_ENDPOINT=$e SCHEDULERS=auto \
+            bash {{RAIZ}}/scripts/bench-stack.sh $rig 0 1 10s 5
+    done
+    # --- braço B: máquina inteira, dentro de max_connections=20 ---
+    for e in transacoes extrato; do
+        # 4 workers sync, 1 conexão cada = 4 conexões.
+        BENCH_PROJETO=django  BENCH_SERVER=gunicorn-sync BENCH_ENDPOINT=$e \
+            bash {{RAIZ}}/scripts/bench-stack.sh $rig 0 4 10s 5
+        # 4 workers x pool 4 = 16 conexões.
+        BENCH_PROJETO=fastapi BENCH_ENDPOINT=$e DB_POOL_MAX=4 \
+            bash {{RAIZ}}/scripts/bench-stack.sh $rig 0 4 10s 5
+        # 1 nó, schedulers automáticos, pool 16 = 16 conexões.
+        BENCH_PROJETO=elixir  BENCH_ENDPOINT=$e SCHEDULERS=auto DB_POOL_MAX=16 \
+            bash {{RAIZ}}/scripts/bench-stack.sh $rig 0 1 10s 5
+    done
+    just bench-tabela
+
 # imprime a tabela comparativa das séries já executadas
 [group('bench')]
 bench-tabela:
