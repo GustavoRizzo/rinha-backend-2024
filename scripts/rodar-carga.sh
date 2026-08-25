@@ -66,9 +66,22 @@ for _ in $(seq 1 20); do
     sleep 2
 done
 
+# Foto do cpu.stat ANTES da carga. O delta contra a foto de depois é o consumo
+# de CPU de cada serviço durante os 4 minutos — o número que decide
+# redistribuição de cota sem repetir o erro de `performance/fastapi/02`, que
+# elegeu uma repartição em saturação e a viu ser recusada pela carga real.
+cgroup_antes=$(mktemp)
+cgroup_depois=$(mktemp)
+trap 'rm -f "$cgroup_antes" "$cgroup_depois"' EXIT
+bash "$RAIZ/scripts/cgroup-snapshot.sh" "${compose_args[@]}" > "$cgroup_antes"
+
 echo "==> executando o Gatling (a simulação dura 4 minutos)"
 cd "$RAIZ/gatling"
 ./mvnw -B -q gatling:test "-Dgatling.simulationClass=$SIMULACAO"
+
+# Antes de qualquer coisa que demore: a stack ainda está de pé, e cada segundo
+# a mais entre o fim da carga e esta leitura adiciona CPU ociosa ao delta.
+bash "$RAIZ/scripts/cgroup-snapshot.sh" "${compose_args[@]}" > "$cgroup_depois"
 
 relatorio=$(find "$RAIZ/gatling/target/gatling" -maxdepth 1 -type d -name "*simulation*" \
             | sort | tail -1)
@@ -79,5 +92,6 @@ destino="$RAIZ/resultados/$SLUG/$carimbo"
 mkdir -p "$destino"
 cp -r "$relatorio/." "$destino/"
 
-python3 "$RAIZ/scripts/metadata-carga.py" "$destino" "$SLUG" "$pronta" "${compose_args[@]}"
+python3 "$RAIZ/scripts/metadata-carga.py" "$destino" "$SLUG" "$pronta" \
+    "$cgroup_antes" "$cgroup_depois" "${compose_args[@]}"
 echo "==> resultado em $destino"
