@@ -116,6 +116,18 @@ defmodule Rinha.Dominio do
   # barras invertidas dentro da descrição. Os outros campos não precisam.
   # `to_char` existe porque um timestamptz em JSON sai com `+00:00`, e o
   # contrato do README mostra `Z`.
+  # Nomes de cache dos statements. Sem eles, `Postgrex.query/4` monta um
+  # `%Query{name: ""}` — statement SEM NOME, que o Postgres prepara e descarta a
+  # cada chamada (`deps/postgrex/lib/postgrex.ex:339`). Medido: `plans = calls`
+  # e **62,2% do tempo de banco gasto planejando**, contra ZERO planejamento do
+  # asyncpg. Ver `performance/elixir/04`.
+  #
+  # A opção `prepare: :named` da conexão NÃO resolve isso: ela decide se
+  # queries preparadas ganham nome, não se `query/4` reusa alguma coisa. Foi
+  # exatamente a suposição errada que custou este experimento.
+  #
+  # O cache é POR CONEXÃO, e mantido pelo DBConnection. Com pool de 8, cada
+  # statement é preparado 8 vezes na vida do processo e reusado daí em diante.
   @sql_extrato_unico """
       SELECT c.saldo,
              c.limite,
@@ -160,7 +172,10 @@ defmodule Rinha.Dominio do
     # os dois.
     resultado =
       Postgrex.transaction(conn, fn tx ->
-        case Postgrex.query!(tx, sql, [delta, id_cliente]) do
+        # O nome do cache acompanha o SQL: crédito e débito são statements
+        # DIFERENTES, e um nome só para os dois faria o segundo reusar o plano
+        # do primeiro — silenciosamente, e com a cláusula de limite errada.
+        case Postgrex.query!(tx, sql, [delta, id_cliente], cache_statement: nome_cache(tipo)) do
           # Zero linhas afetadas é ambíguo: cliente inexistente ou limite
           # estourado. Aqui, como no FastAPI, não gastamos uma segunda query
           # para desambiguar — o roteador já barrou os IDs inválidos com
@@ -170,13 +185,12 @@ defmodule Rinha.Dominio do
             Postgrex.rollback(tx, :sem_limite)
 
           %Postgrex.Result{rows: [[saldo, limite]]} ->
-            Postgrex.query!(tx, @sql_inserir_transacao, [
-              id_cliente,
-              valor,
-              tipo,
-              descricao,
-              agora
-            ])
+            Postgrex.query!(
+              tx,
+              @sql_inserir_transacao,
+              [id_cliente, valor, tipo, descricao, agora],
+              cache_statement: "inserir_transacao"
+            )
 
             {limite, saldo}
         end
@@ -200,13 +214,15 @@ defmodule Rinha.Dominio do
           {:ok, integer(), integer(), [list()]} | :nao_encontrado
   def extrato_duas_queries(pool, id_cliente) do
     Postgrex.transaction(pool, fn conn ->
-      case Postgrex.query!(conn, @sql_cliente, [id_cliente]) do
+      case Postgrex.query!(conn, @sql_cliente, [id_cliente], cache_statement: "cliente") do
         %Postgrex.Result{rows: []} ->
           Postgrex.rollback(conn, :nao_encontrado)
 
         %Postgrex.Result{rows: [[saldo, limite]]} ->
           %Postgrex.Result{rows: ultimas} =
-            Postgrex.query!(conn, @sql_ultimas_transacoes, [id_cliente])
+            Postgrex.query!(conn, @sql_ultimas_transacoes, [id_cliente],
+              cache_statement: "ultimas_transacoes"
+            )
 
           {saldo, limite, ultimas}
       end
@@ -221,7 +237,9 @@ defmodule Rinha.Dominio do
   @spec extrato_query_unica(term(), integer()) ::
           {:ok, integer(), integer(), String.t()} | :nao_encontrado
   def extrato_query_unica(pool, id_cliente) do
-    case Postgrex.query!(pool, @sql_extrato_unico, [id_cliente]) do
+    case Postgrex.query!(pool, @sql_extrato_unico, [id_cliente],
+           cache_statement: "extrato_unico"
+         ) do
       %Postgrex.Result{rows: []} -> :nao_encontrado
       %Postgrex.Result{rows: [[saldo, limite, ultimas]]} -> {:ok, saldo, limite, ultimas}
     end
@@ -289,6 +307,9 @@ defmodule Rinha.Dominio do
          })}
     end
   end
+
+  defp nome_cache("c"), do: "credito"
+  defp nome_cache("d"), do: "debito"
 
   @doc """
   Formata como o README: `2024-01-17T02:34:41.217753Z`.

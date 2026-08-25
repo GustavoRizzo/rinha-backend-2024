@@ -86,7 +86,7 @@ SELECT calls,
        round(plans::numeric / NULLIF(calls,0), 3) AS planos_por_chamada,
        round(total_plan_time::numeric, 1)  AS ms_planejando,
        round(total_exec_time::numeric, 1)  AS ms_executando,
-       round(100 * total_plan_time / NULLIF(total_plan_time + total_exec_time, 0), 1)
+       round((100 * total_plan_time / NULLIF(total_plan_time + total_exec_time, 0))::numeric, 1)
            AS pct_do_tempo_planejando,
        left(regexp_replace(query, '\s+', ' ', 'g'), 46) AS query
   FROM pg_stat_statements
