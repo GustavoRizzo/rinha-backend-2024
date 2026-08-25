@@ -1,4 +1,4 @@
-# elixir/02 — As três implementações sem limitação de hardware
+# elixir/03 — As três implementações sem limitação de hardware
 
 **Documento aberto: a previsão está registrada, a medição ainda não aconteceu.**
 
