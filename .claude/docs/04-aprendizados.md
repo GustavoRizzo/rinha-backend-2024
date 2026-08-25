@@ -386,6 +386,15 @@ aparece em relatório técnico.
   `performance/django/06`, seção 8, e a segunda a errar a leitura: 394,6 µs
   contra 314,3 do FastAPI, 25,6% pior.
 
+- **"O Elixir custa mais por requisição que o FastAPI."** Dito assim, engana. O
+  custo da APLICAÇÃO é 1,10x na escrita e 0,96x na leitura — praticamente
+  empate. O que é sistematicamente mais caro é o **banco**: 1,36x na escrita e
+  2,71x na leitura, com SQL idêntico, mesmo schema, mesma cota, e reproduzido em
+  três regimes (bancada sob cota, carga real do Gatling e bancada sem cota, onde
+  chega a 3,47x). A conclusão original de `performance/elixir/01` foi corrigida
+  na própria página. **Somar API e banco numa métrica só escondeu onde estava o
+  custo.**
+
 - **"O nginx virou o gargalo da leitura."** Afirmado a partir de 87–93% de
   períodos congelados no cgroup dele. Soltar a cota de 0.15 para 0.40 rendeu
   2,6% — dentro do ruído. Ele saturava a própria cota sem ser o limite do
@@ -407,6 +416,17 @@ Gatling responde "como se comporta no que chega" — e a segunda é quem decide.
 períodos congelados diz que um serviço satura a *sua* cota, não que ele seja a
 parede. A prova é operacional: solte a cota daquele serviço e veja se a vazão
 sobe. Se não subir, ele não era o gargalo.
+
+**Regra derivada**: **medir por serviço, não por sistema.** Uma métrica que
+soma aplicação e banco responde "quanto custa", nunca "onde custa" — e as duas
+perguntas levam a ações opostas: trocar de linguagem ou trocar de driver. O
+cgroup de cada serviço é barato de coletar e foi o que separou as duas.
+
+**Regra derivada**: **paralelismo não resolve serialização.** Sem cota nenhuma,
+num host de 20 núcleos, o Elixir entregou 2,06x o FastAPI na LEITURA e perdeu
+por 12,8% na ESCRITA — porque a bancada escreve sempre no mesmo cliente, e todo
+`UPDATE` na mesma linha serializa. Antes de atribuir a um runtime a culpa por
+não escalar, verifique se o trabalho é paralelizável.
 
 **Regra derivada**: **verificar a VERSÃO do runtime é parte da metodologia.**
 Uma armadilha real de uma linguagem pode já ter sido resolvida na versão que

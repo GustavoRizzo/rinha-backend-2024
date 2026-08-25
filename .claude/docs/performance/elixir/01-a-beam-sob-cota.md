@@ -208,11 +208,40 @@ ordem de grandeza da **escrita** nos dois projetos e erraram a **leitura** nos
 dois — subestimando o ganho do FastAPI e superestimando o do Elixir.
 
 O que este resultado **não** autoriza dizer: que a BEAM é lenta. Ela entregou
-1,57x sobre o Django com o mesmo SQL e a mesma estratégia. O que ele autoriza
-dizer é que, **para este trabalho** — dois endpoints, payload minúsculo, uma
-query por requisição —, o custo por requisição de CPython com uvloop e asyncpg é
-menor que o de Elixir com Bandit e Postgrex. O trabalho é curto demais para a
-BEAM cobrar barato: quase tudo é entrar e sair do runtime.
+1,57x sobre o Django com o mesmo SQL e a mesma estratégia.
+
+> **Correção acrescentada em 2026-08-25, depois de separar API e banco.** A
+> frase original desta seção dizia que "o custo por requisição de CPython com
+> uvloop e asyncpg é menor que o de Elixir com Bandit e Postgrex". Separando os
+> dois cgroups, a afirmação fica **imprecisa**, e do jeito que mais engana:
+>
+> | | | FastAPI | Elixir | fator |
+> | - | - | - | - | - |
+> | escrita | CPU da **API** | 498,9 µs | 548,5 µs | 1,10x |
+> | | CPU do **banco** | 485,2 µs | 659,1 µs | **1,36x** |
+> | leitura | CPU da **API** | 256,1 µs | 246,7 µs | **0,96x** |
+> | | CPU do **banco** | 177,0 µs | 479,4 µs | **2,71x** |
+>
+> (Séries `-gargalo` do FastAPI a 0.40 CPU, com banco em 0.60 — o mesmo rig e a
+> mesma cota de banco das séries do Elixir, conferido em
+> [`fastapi/02`, seção 3](../fastapi/02-onde-esta-o-gargalo.md).)
+>
+> A aplicação Elixir custa 10% a mais na escrita e é **ligeiramente mais barata
+> que o FastAPI na leitura**. O que está sistematicamente caro é o **banco**,
+> nos dois endpoints, com SQL idêntico. A leitura honesta passa a ser: **a BEAM
+> está competitiva; o que está caro é o que o Postgrex faz o Postgres
+> trabalhar** — e isso é possivelmente consertável, ao contrário de "a
+> linguagem custa mais".
+>
+> A observação foi confirmada depois em dois outros regimes: na carga real do
+> Gatling ([`02`](./02-ocioso-na-carga-real.md)) e sem cota nenhuma
+> ([`03`](./03-sem-cota-varios-nucleos.md), seção 6.5), onde o fator na leitura
+> chega a 3,47x.
+
+Sobre o custo da **aplicação** — os 10% da escrita — a leitura continua valendo:
+para este trabalho, dois endpoints com payload minúsculo e uma query por
+requisição, o trabalho é curto demais para a BEAM cobrar barato. Quase tudo é
+entrar e sair do runtime.
 
 ### 5.4 O achado não previsto: a leitura sai limitada pelo BANCO
 
@@ -273,9 +302,11 @@ a afirmação; sustentá-la exige repetir, e está nas ações.
 
 - [x] Stack Elixir na competição: USD 100.000, zero inconsistências, subida em 4s.
 - [x] Variantes `SCHEDULERS` e `BUSY_WAIT` medidas, com e sem cota.
-- [ ] **Caçar os 479,4 µs de CPU de banco** (seção 5.4). É o achado mais
-      relevante desta página, e o único que ainda é hipótese. Método:
-      `pg_stat_statements` comparando `plans` com `calls`, Elixir contra FastAPI.
+- [ ] **Caçar o excesso de CPU de banco** (seção 5.4, e a correção da 5.3). É o
+      achado mais relevante desta página, e o único que ainda é hipótese. Ele
+      aparece nos DOIS endpoints (1,36x na escrita, 2,71x na leitura), em três
+      regimes diferentes. Método: `pg_stat_statements` comparando `plans` com
+      `calls`, Elixir contra FastAPI.
 - [ ] Investigar a **amplitude de 28,8%** na leitura com query única. Amplitude
       alta não é ruído a mediar.
 - [ ] Repetir a prova oficial mais duas vezes, para dizer se o **máximo de

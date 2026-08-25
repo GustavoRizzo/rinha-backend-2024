@@ -4,7 +4,7 @@
   "duracao": "10s",
   "modelo_de_carga": "fechado(saturacao)",
   "concorrencia": 50,
-  "git_commit": "9674520",
+  "git_commit": "ad1bd39",
   "git_sujo": false,
   "ferramenta": "oha 1.15.0",
   "host": {
@@ -16,45 +16,45 @@
   "repeticoes": 5,
   "aquecimento_descartado": true,
   "rps": {
-    "mediana": 1880.0,
-    "min": 1814.38,
-    "max": 1905.22,
-    "amplitude_pct": 4.83
+    "mediana": 1955.02,
+    "min": 1933.3,
+    "max": 1971.82,
+    "amplitude_pct": 1.97
   },
   "p50_ms": {
-    "mediana": 24.44,
-    "min": 24.11,
-    "max": 25.55,
-    "amplitude_pct": 5.86
+    "mediana": 23.39,
+    "min": 23.04,
+    "max": 23.62,
+    "amplitude_pct": 2.47
   },
   "p99_ms": {
-    "mediana": 47.01,
-    "min": 46.57,
-    "max": 49.18,
-    "amplitude_pct": 5.56
+    "mediana": 46.26,
+    "min": 46.14,
+    "max": 46.53,
+    "amplitude_pct": 0.83
   },
   "codigos": {
-    "200": 18756
+    "200": 19290
   },
   "rps_por_repeticao": [
-    1880.0,
-    1878.7,
-    1905.2,
-    1900.9,
-    1814.4
+    1933.3,
+    1957.7,
+    1971.8,
+    1947.9,
+    1955.0
   ],
   "cgroup": {
     "cpu_usado_s": {
-      "mediana": 19.68,
-      "min": 19.52,
-      "max": 21.32,
-      "amplitude_pct": 9.16
+      "mediana": 19.93,
+      "min": 19.5,
+      "max": 21.29,
+      "amplitude_pct": 8.95
     },
     "cpu_us_por_request": {
-      "mediana": 1087.8,
-      "min": 1026.8,
-      "max": 1136.6,
-      "amplitude_pct": 10.09
+      "mediana": 1025.8,
+      "min": 991.1,
+      "max": 1103.4,
+      "amplitude_pct": 10.95
     },
     "nr_throttled": {
       "mediana": 0,
@@ -83,16 +83,16 @@
   },
   "cgroup_nginx": {
     "cpu_usado_s": {
-      "mediana": 1.53,
-      "min": 1.53,
-      "max": 1.54,
-      "amplitude_pct": 1.05
+      "mediana": 1.54,
+      "min": 1.54,
+      "max": 1.55,
+      "amplitude_pct": 0.65
     },
     "cpu_us_por_request": {
-      "mediana": 81.4,
-      "min": 80.3,
-      "max": 85.2,
-      "amplitude_pct": 6.02
+      "mediana": 79.1,
+      "min": 78.7,
+      "max": 80.1,
+      "amplitude_pct": 1.77
     },
     "nr_throttled": {
       "mediana": 0,
@@ -121,16 +121,16 @@
   },
   "cgroup_db": {
     "cpu_usado_s": {
-      "mediana": 11.97,
-      "min": 11.96,
+      "mediana": 11.96,
+      "min": 11.94,
       "max": 12.0,
-      "amplitude_pct": 0.32
+      "amplitude_pct": 0.48
     },
     "cpu_us_por_request": {
-      "mediana": 637.6,
-      "min": 629.3,
-      "max": 661.4,
-      "amplitude_pct": 5.03
+      "mediana": 613.3,
+      "min": 610.0,
+      "max": 619.2,
+      "amplitude_pct": 1.5
     },
     "nr_throttled": {
       "mediana": 0,

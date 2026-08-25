@@ -7,7 +7,7 @@ experimento 01 do Elixir **não** é continuação do 03 do FastAPI.
 | - | - | - | - |
 | [01](./01-a-beam-sob-cota.md) | A BEAM sob cota: as duas armadilhas **não aparecem**, e o Elixir ficou **mais caro que o FastAPI**; USD 100.000 | 2026-08-25 | **concluído** |
 | [02](./02-ocioso-na-carga-real.md) | Ocioso por serviço na carga real: ninguém passa de 42% da cota — **não há o que redistribuir** | 2026-08-25 | **concluído** |
-| [03](./03-sem-cota-varios-nucleos.md) | As três implementações sem limitação de hardware, em 20 vCPU | — | **previsão registrada, sem medição** |
+| [03](./03-sem-cota-varios-nucleos.md) | Sem limitação de hardware: **2,06x** o FastAPI na leitura com 1 processo, e a vantagem **inverte** com 4 workers | 2026-08-25 | **concluído** |
 
 ## Por que este projeto existe
 
