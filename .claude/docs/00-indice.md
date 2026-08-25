@@ -17,12 +17,13 @@ de recursos.
 
 ## Estado atual
 
-**Três implementações, doze experimentos, as três passando na prova oficial com
-pontuação máxima.**
+**Quatro implementações, doze experimentos. As três medidas passam na prova
+oficial com pontuação máxima; a quarta (Go) acabou de nascer e ainda não foi
+medida.**
 
 - [x] Documentação base (docs 01 a 05) e diário de aprendizados
-- [x] Modelo de domínio, endpoints e 138 testes automatizados (64 no Django,
-      50 no FastAPI, 24 no Elixir)
+- [x] Modelo de domínio, endpoints e 177 testes automatizados (64 no Django,
+      50 no FastAPI, 24 no Elixir, 39 no Go)
 - [x] Stack completa: nginx + 2 APIs Django/Gunicorn + Postgres, em 1.50 CPU e 550MB
 - [x] Ferramental: `oha` 1.15.0 (comparativos rápidos) e Gatling 3.15.1 (prova oficial)
 - [x] Scripts de ciclo, bancada, pontuação e validação de limites
@@ -39,6 +40,13 @@ pontuação máxima.**
       [04](./performance/elixir/04-o-statement-que-nao-era-reusado.md) derrubou
       a conclusão dos três anteriores: o statement era **replanejado a cada
       requisição**, e corrigido isso o Elixir vira o **mais barato dos três**
+- [x] Quarta implementação em Go + `net/http` + `pgx`, com stack, rigs de
+      bancada, perfil e suíte própria. O
+      [documento de abertura](./performance/go/00-indice.md) registra as
+      previsões **antes** de medir — e já derruba a previsão do `GOMAXPROCS`
+      com medição do runtime cru
+- [ ] Medir o Go: `just diag-prepared go` primeiro, depois bancada e prova
+      oficial
 
 Resultado da configuração final em Django: **100% das requisições abaixo de
 250ms**, p98 de 7ms contra um SLA de 250ms, subida em ~20s contra um limite de
@@ -59,11 +67,12 @@ mais barato por requisição: 462 µs na escrita e 158 µs na leitura.
   ninguém conferiu se ele reusa statements. Se não reusar, parte dos 862 µs da
   escrita e dos 1258 µs da leitura é o mesmo problema do
   [`elixir/04`](./performance/elixir/04-o-statement-que-nao-era-reusado.md)
-- Go — previsão registrada em
-  [`performance/django/06`](./performance/django/06-tipos-de-worker.md), seção 8.
-  A do FastAPI já foi conferida em
-  [`performance/fastapi/01`](./performance/fastapi/01-fastapi-async.md): certa na
-  escrita, subestimada na leitura
+- **Medir o Go.** A implementação existe e passa nos 39 testes; nenhum número de
+  desempenho foi levantado. A previsão de
+  [`performance/django/06`](./performance/django/06-tipos-de-worker.md), seção 8
+  (50–100 µs/req) está registrada em
+  [`performance/go/00-indice.md`](./performance/go/00-indice.md), seção 6, junto
+  com as deste projeto
 - Redistribuir a cota entre API e banco agora que a API ficou mais barata — é o
   teste que responde se o gargalo migrou para o Postgres
 - Promover a query única do extrato a padrão do FastAPI (1,25x, já com testes

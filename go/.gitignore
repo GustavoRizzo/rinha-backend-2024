@@ -1,0 +1,3 @@
+# Binário compilado localmente. A medição roda em container; este arquivo só
+# aparece se alguém rodar `go build` na mão.
+/rinha

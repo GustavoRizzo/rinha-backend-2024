@@ -1,0 +1,109 @@
+name: rinha-backend-go
+
+# Stack completa da Rinha em Go: load balancer + 2 APIs + banco.
+#
+# Orçamento: 1.5 CPU e 550MB SOMANDO TUDO. A distribuição é IDÊNTICA à das
+# stacks Django, FastAPI e Elixir, e isso é deliberado: ela foi obtida nos
+# experimentos `django/01` a `django/05` e confirmada na prova oficial em
+# `fastapi/02`. Repeti-la aqui é o que mantém *uma variável por vez* —
+# rebalancear a cota junto com a troca de LINGUAGEM tornaria a diferença
+# inatribuível.
+#
+# Confira a soma com: just check go
+services:
+  db:
+    image: postgres:18-alpine
+    hostname: db
+    environment:
+      - POSTGRES_DB=rinha
+      - POSTGRES_USER=rinha
+      - POSTGRES_PASSWORD=rinha
+    volumes:
+      - ../infra/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      # MESMOS arquivos que as outras três stacks usam. Executados UMA vez, em
+      # ordem alfabética, na criação do volume. O `ddl.sql` cria também a tabela
+      # `django_migrations` — peso morto aqui, mantido porque um schema
+      # divergente invalidaria a comparação por um motivo que não é a linguagem.
+      - ../infra/sql:/docker-entrypoint-initdb.d:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      # -h 127.0.0.1 de propósito: durante a inicialização a imagem sobe um
+      # servidor TEMPORÁRIO que escuta apenas no socket Unix.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U rinha -d rinha"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    deploy:
+      resources:
+        limits:
+          cpus: "${DB_CPUS:-0.60}"
+          memory: "318MB"
+
+  api01: &api
+    build:
+      context: .
+    hostname: api01
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - BIND=unix:/sockets/api01.sock
+      # As variantes do experimento. Os padrões são as escolhas herdadas dos
+      # projetos anteriores; os outros valores existem para virar braço de
+      # controle numa série da bancada.
+      #
+      # `GOMAXPROCS=auto` é o padrão porque, ao contrário do Elixir, aqui o
+      # runtime JÁ lê a cota do cgroup — com piso de 2 threads
+      # (`performance/go/00-indice.md`, seção 7.1). O braço `1` é o
+      # experimento, não a correção.
+      - GOMAXPROCS=${GOMAXPROCS:-auto}
+      - EXTRATO_QUERY=${EXTRATO_QUERY:-unica}
+      - SERIALIZACAO=${SERIALIZACAO:-manual}
+      - GOMEMLIMIT=${GOMEMLIMIT:-}
+      # Teto por instância: 2 APIs x 8 + folga cabe nas 20 conexões que o
+      # `postgresql.conf` permite.
+      - DB_POOL_MAX=${DB_POOL_MAX:-8}
+    volumes:
+      - sockets:/sockets
+    deploy:
+      resources:
+        limits:
+          cpus: "${API_CPUS:-0.40}"
+          # 100MB por instância, igual às outras três stacks. A previsão de
+          # `django/06` diz que um binário Go usaria 10-20MB contra os ~54MB do
+          # Python — e este é o número que a primeira medição sob carga deve
+          # conferir, porque "a memória é o risco real" já foi escrito uma vez
+          # neste laboratório e estava errado.
+          memory: "100MB"
+
+  api02:
+    <<: *api
+    hostname: api02
+    environment:
+      - DB_HOST=db
+      - BIND=unix:/sockets/api02.sock
+      - GOMAXPROCS=${GOMAXPROCS:-auto}
+      - EXTRATO_QUERY=${EXTRATO_QUERY:-unica}
+      - SERIALIZACAO=${SERIALIZACAO:-manual}
+      - GOMEMLIMIT=${GOMEMLIMIT:-}
+      - DB_POOL_MAX=${DB_POOL_MAX:-8}
+
+  nginx:
+    image: nginx:1.29-alpine
+    depends_on:
+      - api01
+      - api02
+    volumes:
+      - ../infra/nginx/nginx-rinha.conf:/etc/nginx/nginx.conf:ro
+      - sockets:/sockets
+    ports:
+      - "9999:9999"
+    deploy:
+      resources:
+        limits:
+          cpus: "${LB_CPUS:-0.10}"
+          memory: "32MB"
+
+volumes:
+  sockets:

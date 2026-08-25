@@ -9,7 +9,7 @@
 #   rig: nginx-unix | nginx-tcp | postgres | postgres-sem-persistencia
 #        | postgres-sem-limite   (remove as cotas de CPU/memória)
 #
-# BENCH_PROJETO=django|fastapi escolhe o projeto medido. O que muda de projeto
+# BENCH_PROJETO=django|fastapi|elixir|go escolhe o projeto medido. O que muda de projeto
 # para projeto — rigs disponíveis, arquivos de compose, nomes de container e
 # como o estado é reposto — vive em `scripts/perfis/<projeto>.sh`. Tudo o mais
 # é igual aqui, e é isso que torna as séries comparáveis entre projetos.
@@ -42,6 +42,7 @@ case "$PROJETO" in
     django)  SERVIDOR_PADRAO=gunicorn-sync ;;
     fastapi) SERVIDOR_PADRAO=uvicorn ;;
     elixir)  SERVIDOR_PADRAO=bandit ;;
+    go)      SERVIDOR_PADRAO=nethttp ;;
     *) echo "ABORTADO: projeto '$PROJETO' não tem servidor padrão declarado." >&2; exit 1 ;;
 esac
 SERVIDOR="${BENCH_SERVER:-$SERVIDOR_PADRAO}"

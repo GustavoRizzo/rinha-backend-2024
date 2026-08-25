@@ -299,6 +299,40 @@ porque `nr_throttled` estava sendo medido por serviço.
 
 ---
 
+### [2026-08-25] O mesmo zero significa o oposto em dois drivers de Postgres
+**Contexto**: porte da configuração de pool do FastAPI para o Go. O asyncpg
+recebe `max_inactive_connection_lifetime=0`, e ali zero quer dizer **nunca
+recicle a conexão** — a decisão que `performance/django/04` sustenta com 4,75x
+entre conexão persistente e conexão nova por requisição.
+
+**Observado**: com `MaxConnLifetime = 0` no `pgxpool`, a API não subia:
+
+```
+pgxpool: too many failed attempts acquiring connection;
+likely bug in PrepareConn, BeforeAcquire, or ShouldPing hook
+```
+
+A mensagem acusa hooks que o código não usa. A causa está em
+`pgxpool/pool.go:463`: `isExpired` é `time.Now().After(maxAgeTime)`, e
+`maxAgeTime` é a criação **mais** `MaxConnLifetime`. Com zero, toda conexão
+nasce vencida e é destruída no primeiro `Acquire`. Os padrões do pgx são
+finitos: 1h de vida e 30min de ociosidade (`pool.go:22-23`).
+
+**Conclusão**: "zero" é uma convenção, não uma semântica. Em asyncpg é
+*infinito*; em pgxpool é *imediato*. Portar configuração entre stacks copiando o
+valor — e não a intenção — troca uma decisão medida por outra sem avisar.
+
+**Ação**: `MaxConnLifetime` e `MaxConnIdleTime` passam a receber um valor grande
+e finito, com o motivo e a citação de fonte no comentário
+(`go/db.go`). Registrado em `performance/go/00-indice.md`, seção 7.3.
+
+**O que salvou**: a falha foi barulhenta. Se zero significasse "recicle a cada
+requisição" em vez de "destrua imediatamente", a stack teria subido, respondido
+tudo certo, e pago 4,75x em toda requisição — dentro de um número plausível.
+Este projeto já perdeu três experimentos para números plausíveis.
+
+---
+
 ### [2026-08-21] `PositiveIntegerField` no Postgres é `integer` + CHECK constraint
 **Contexto**: escolhendo o tipo da coluna `Transacao.valor`, que por contrato só
 pode ser um inteiro positivo. A escolha "óbvia" seria `PositiveIntegerField`.
@@ -395,6 +429,18 @@ aparece em relatório técnico.
   na própria página. **Somar API e banco numa métrica só escondeu onde estava o
   custo.**
 
+- **"Uma porta Go sem `GOMAXPROCS` ajustado subiria 20 threads disputando 0.40
+  CPU, e teria cauda pior que o Django."** Previsão de
+  `performance/django/06`, seção 8, **morta pela versão da linguagem** antes de
+  a primeira série rodar: o Go 1.27 lê a cota do cgroup
+  (`runtime/cgroup_linux.go:85-92`) e sobe 2 threads sob 0.40 CPU, não 20. Mesma
+  história do OTP 27 logo acima — duas previsões de armadilha de runtime, as
+  duas neutralizadas por evolução do runtime. **A armadilha é real e o
+  mecanismo é real; o que envelhece é o pressuposto de que o runtime não
+  aprendeu.** O que sobra de verdadeiro: `NumCPU()` continua devolvendo 20 lá
+  dentro, e qualquer código que dimensione por ele continua caindo na armadilha.
+  Medido em `performance/go/00-indice.md`, seção 7.1.
+
 - **"`prepare: :named` mantém os statements em cache, sem pagar parse+plan por
   requisição."** Escrito num comentário de `elixir/lib/rinha/config.ex` com a
   confiança de quem conferiu, sem ter conferido. É falso: `Postgrex.query/4` sem
@@ -456,8 +502,9 @@ não escalar, verifique se o trabalho é paralelizável.
 Uma armadilha real de uma linguagem pode já ter sido resolvida na versão que
 está rodando. `os.cpu_count()` não enxerga o cgroup; o OTP 27 enxerga. Tratar o
 comportamento de um runtime como universal foi o que produziu a previsão errada
-sobre a BEAM — e é o que precisa ser conferido no fonte antes de repetir a
-previsão do `GOMAXPROCS` para o Go.
+sobre a BEAM — e produziu de novo a do `GOMAXPROCS` para o Go, que o 1.27
+neutraliza lendo a cota do cgroup (`runtime/cgroup_linux.go:85-92`). Duas
+previsões, dois runtimes, a mesma causa: supor que o runtime não aprendeu.
 
 **Regra derivada**: **quando o gargalo muda de serviço, a comparação anterior
 deixa de valer.** Duas linhas com o mesmo endpoint e a mesma cota podem estar

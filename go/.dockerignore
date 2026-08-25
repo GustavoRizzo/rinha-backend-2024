@@ -1,0 +1,6 @@
+# O binário local e os testes não entram na imagem: a compilação acontece no
+# estágio `build`, e os testes exigem um Postgres que não existe lá.
+rinha
+*_test.go
+.dockerignore
+.gitignore

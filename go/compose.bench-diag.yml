@@ -1,0 +1,19 @@
+# Override de DIAGNÓSTICO: liga o pg_stat_statements no banco do rig.
+#
+# Serve a uma pergunta só, e ela é herdada:
+# `performance/elixir/04` mediu `plans = calls` e 62,2% do tempo de banco
+# gasto PLANEJANDO, por uma opção de driver que foi suposta em vez de conferida.
+# O padrão do pgx foi conferido no fonte
+# (`performance/go/00-indice.md`, seção 7.2) e diz que os statements são
+# reusados — mas a lição daquele experimento é justamente que conferir no fonte
+# não substitui medir. `just diag-prepared go` precisa marcar `plans = 0`.
+#
+# FORA da metodologia de medição: o próprio pg_stat_statements custa CPU. Nada
+# medido com este override entra em `resultados/`.
+services:
+  db:
+    volumes:
+      - ../infra/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ../infra/postgres/postgresql-diag.conf:/etc/postgresql/postgresql-diag.conf:ro
+      - ../infra/sql:/docker-entrypoint-initdb.d:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql-diag.conf

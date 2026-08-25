@@ -280,6 +280,44 @@ ex-deps:
     @just ex mix deps.get
 
 # ==========================================================================
+# go — projeto Go + net/http + pgx
+#
+# Como as receitas `ex-*`, estas NÃO exigem a linguagem instalada no host:
+# tudo roda na mesma imagem que o Dockerfile usa para compilar. Ver
+# `scripts/go-teste.sh` para o porquê.
+# ==========================================================================
+
+# roda `go test` contra um Postgres descartável (sobe e derruba sozinho)
+[group('go')]
+go-test *args:
+    @bash {{RAIZ}}/scripts/go-teste.sh test {{args}}
+
+# derruba o banco de teste, se um `go-test` interrompido o tiver deixado de pé
+[group('go')]
+go-db-down:
+    @bash {{RAIZ}}/scripts/go-teste.sh down
+
+# comando go arbitrário dentro da imagem de build (ex: just go go mod tidy)
+[group('go')]
+go +args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker volume create rinha-go-cache >/dev/null
+    docker run --rm -v rinha-go-cache:/gocache alpine \
+        sh -c "mkdir -p /gocache/build /gocache/mod && chown -R $(id -u):$(id -g) /gocache"
+    docker run --rm -v {{RAIZ}}/go:/src -w /src -u "$(id -u):$(id -g)" \
+        -v rinha-go-cache:/gocache -e HOME=/tmp \
+        -e GOCACHE=/gocache/build -e GOMODCACHE=/gocache/mod \
+        golang:1.27-alpine {{args}}
+
+# formata, examina e compila — o que rodar antes de commitar
+[group('go')]
+go-check:
+    @just go gofmt -l .
+    @just go go vet ./...
+    @just go go build -o /dev/null .
+
+# ==========================================================================
 # bench — comparativos locais rápidos (SQLite, sem Docker, ferramenta: oha)
 #
 # NÃO confundir com `just load`, que roda o Gatling contra a stack completa.
@@ -429,6 +467,12 @@ bench-fa-01:
 [group('bench')]
 bench-ex endpoint="transacoes" cpus="0.40" duracao="10s" reps="5":
     @BENCH_PROJETO=elixir BENCH_ENDPOINT={{endpoint}} \
+        bash {{RAIZ}}/scripts/bench-stack.sh postgres {{cpus}} 1 {{duracao}} {{reps}}
+
+# uma série do Go atrás do nginx (variantes por variável de ambiente)
+[group('bench')]
+bench-go endpoint="transacoes" cpus="0.40" duracao="10s" reps="5":
+    @BENCH_PROJETO=go BENCH_ENDPOINT={{endpoint}} \
         bash {{RAIZ}}/scripts/bench-stack.sh postgres {{cpus}} 1 {{duracao}} {{reps}}
 
 # reproduz o experimento elixir/01: linha de base e as duas armadilhas da BEAM
