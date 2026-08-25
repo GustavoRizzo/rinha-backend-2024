@@ -541,7 +541,7 @@ bench-ex-01:
 # pool, e é isso que o slug registra (`-pool16`). Passar `w4` para o Elixir
 # produziria um slug que mente sobre o que subiu.
 
-# as TRÊS stacks sem limitação de hardware, em 20 vCPU (experimento elixir/03)
+# as QUATRO stacks sem limitação de hardware, em 20 vCPU (elixir/03, go/04)
 [group('bench')]
 bench-sem-cota:
     #!/usr/bin/env bash
