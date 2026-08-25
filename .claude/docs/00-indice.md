@@ -51,7 +51,13 @@ pior cauda das quatro e ainda não passou pela bancada.**
 - [ ] **Explicar a cauda do Go**: 882 requisições acima de 250ms, todas nos 4
       últimos segundos do teste. Quatro hipóteses com método em
       [`performance/go/00-indice.md`](./performance/go/00-indice.md), seção 7.5
-- [ ] Bancada do Go: `just diag-prepared go` primeiro, depois as séries
+- [x] Bancada do Go ([`performance/go/01`](./performance/go/01-a-aplicacao-sai-da-frente.md)):
+      **302,9 µs na escrita e 91–109 µs na leitura**, a mais barata das quatro —
+      e o `diag-prepared` refutou o replanejamento de statements (48 planos para
+      36.014 chamadas)
+- [ ] **Redistribuir a cota com o Go**: a repartição atual foi obtida com uma API
+      que custava 862 µs; a de agora custa 303 µs e o banco satura primeiro na
+      leitura
 
 Resultado da configuração final em Django: **100% das requisições abaixo de
 250ms**, p98 de 7ms contra um SLA de 250ms, subida em ~20s contra um limite de

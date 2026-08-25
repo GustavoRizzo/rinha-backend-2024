@@ -5,7 +5,10 @@ experimento 01 do Go **não** é continuação do 04 do Elixir.
 
 | # | Experimento | Data | Estado |
 | - | - | - | - |
-| — | *(nenhum ainda. A stack passa na prova oficial — USD 100.000, zero inconsistências — mas com a pior cauda das quatro, e a bancada não rodou. Ver seção 7.5)* | 2026-08-25 | — |
+| [01](./01-a-aplicacao-sai-da-frente.md) | A aplicação sai da frente: **a mais barata das quatro** nos dois endpoints, e na leitura **o banco vira a parede** (93,5% de throttling) | 2026-08-25 | **concluído** |
+
+A prova oficial marcou USD 100.000 com zero inconsistências — e com a pior cauda
+das quatro stacks, ainda sem explicação (seção 7.5).
 
 Este arquivo é o documento de abertura do projeto. Ele registra o que se pretende
 construir, as previsões **antes** de existir implementação, e as poucas medições
