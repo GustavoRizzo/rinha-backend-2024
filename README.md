@@ -129,6 +129,7 @@ números, o commit exato medido e os comandos para replicar.
 | [06](./.claude/docs/performance/django/06-tipos-de-worker.md) | Tipos de worker | O Gatling **satura**: `sync` e `gthread` tiram a mesma nota com 59% de diferença de vazão |
 | [fastapi/01](./.claude/docs/performance/fastapi/01-fastapi-async.md) | FastAPI + asyncpg | A previsão acertou na escrita (1,73x) e **subestimou a leitura (4,00x)**: o ORM estava no caminho quente do extrato |
 | [fastapi/02](./.claude/docs/performance/fastapi/02-onde-esta-o-gargalo.md) | Onde está o gargalo | Uma repartição **1,54x melhor na bancada** entregou cauda **pior** na prova oficial — a bancada mede saturação, a Rinha não satura |
+| [fastapi/03](./.claude/docs/performance/fastapi/03-o-que-a-troca-de-framework-comprou.md) | Fechamento | O ganho que dá para atribuir ao framework é **1,73x**, não 4x: o resto era **ORM no caminho quente**, e isso o Django também poderia ter tirado |
 
 Material de apoio em [`.claude/docs/`](./.claude/docs/):
 

@@ -6,7 +6,12 @@ o experimento 01 do FastAPI **não** é continuação do 06 do Django.
 | # | Experimento | Data | Estado |
 | - | - | - | - |
 | [01](./01-fastapi-async.md) | FastAPI + asyncpg: async de ponta a ponta — **1,73x na escrita, 4,00x na leitura**; USD 100.000 | 2026-08-24 | **concluído** |
-| [02](./02-onde-esta-o-gargalo.md) | Onde está o gargalo, e como repartir 1.5 CPU — **1,54x só redistribuindo a cota** | 2026-08-24 | **concluído** |
+| [02](./02-onde-esta-o-gargalo.md) | Onde está o gargalo, e como repartir 1.5 CPU — a bancada elegeu uma repartição que a **prova oficial recusou** | 2026-08-24 | **concluído** |
+| [03](./03-o-que-a-troca-de-framework-comprou.md) | Fechamento: o que a troca de framework comprou, e o que **não** comprou | 2026-08-25 | **concluído** |
+
+**Fechado.** O [documento 03](./03-o-que-a-troca-de-framework-comprou.md)
+consolida o veredito e serve de ponto de partida para a próxima implementação,
+em outra linguagem.
 
 ## Por que este projeto existe
 

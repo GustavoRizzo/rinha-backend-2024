@@ -29,8 +29,10 @@ pontuação máxima.**
 - [x] 9 execuções da simulação oficial: **USD 100.000 e zero inconsistências**
 - [x] Seis documentos de experimento em [`performance/django/`](./performance/django/00-indice.md)
 - [x] Segunda implementação em FastAPI + uvicorn + asyncpg, com bancada
-      parametrizada por projeto e o experimento
-      [`performance/fastapi/01`](./performance/fastapi/01-fastapi-async.md)
+      parametrizada por projeto e três experimentos em
+      [`performance/fastapi/`](./performance/fastapi/00-indice.md) — incluindo o
+      [fechamento](./performance/fastapi/03-o-que-a-troca-de-framework-comprou.md),
+      que separa o que a troca de framework comprou do que não comprou
 
 Resultado da configuração final em Django: **100% das requisições abaixo de
 250ms**, p98 de 7ms contra um SLA de 250ms, subida em ~20s contra um limite de
