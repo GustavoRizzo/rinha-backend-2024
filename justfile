@@ -96,6 +96,12 @@ run proj var="":
     just smoke {{proj}} {{var}}
     just load {{proj}} {{var}}
 
+# amostra cpu.stat de cada serviço a cada segundo (diagnóstico: gastou QUANDO?)
+[group('ciclo')]
+stats-serie proj var="" segundos="300" saida="/tmp/cgroup-serie.jsonl":
+    @bash {{RAIZ}}/scripts/cgroup-serie.sh {{saida}} {{segundos}} \
+        $(just _compose {{proj}} {{var}} | tr '\n' ' ')
+
 # docker stats + throttling de cgroup ao vivo (rode em outro terminal durante a carga)
 [group('ciclo')]
 stats:
