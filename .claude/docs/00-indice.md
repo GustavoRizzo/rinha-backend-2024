@@ -17,9 +17,8 @@ de recursos.
 
 ## Estado atual
 
-**Quatro implementações, doze experimentos. As quatro marcam USD 100.000 na
-prova oficial com zero inconsistências — mas a do Go, recém-nascida, entrega a
-pior cauda das quatro e ainda não passou pela bancada.**
+**Quatro implementações, treze experimentos, as quatro passando na prova oficial
+com pontuação máxima e zero inconsistências.**
 
 - [x] Documentação base (docs 01 a 05) e diário de aprendizados
 - [x] Modelo de domínio, endpoints e 177 testes automatizados (64 no Django,

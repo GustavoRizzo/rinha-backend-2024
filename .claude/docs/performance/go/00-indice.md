@@ -7,8 +7,10 @@ experimento 01 do Go **não** é continuação do 04 do Elixir.
 | - | - | - | - |
 | [01](./01-a-aplicacao-sai-da-frente.md) | A aplicação sai da frente: **a mais barata das quatro** nos dois endpoints, e na leitura **o banco vira a parede** (93,5% de throttling) | 2026-08-25 | **concluído** |
 
-A prova oficial marcou USD 100.000 com zero inconsistências — e com a pior cauda
-das quatro stacks, ainda sem explicação (seção 7.5).
+A prova oficial marcou USD 100.000 com zero inconsistências em quatro execuções.
+As duas limpas e aquecidas deram **100% abaixo de 250ms e p98 de 4ms** — o melhor
+das quatro stacks. A afirmação anterior, de que a cauda era a pior, vinha de uma
+única execução, que era a primeira (seção 7.5).
 
 Este arquivo é o documento de abertura do projeto. Ele registra o que se pretende
 construir, as previsões **antes** de existir implementação, e as poucas medições
@@ -362,77 +364,91 @@ Três leituras:
    `NumCPU=20`. A linha é impressa de propósito em toda subida: é o que permite
    conferir, depois, com que dimensionamento cada série rodou.
 
-### 7.5 Primeira execução da prova oficial
+### 7.5 A prova oficial, quatro execuções — e a correção da primeira
 
-`resultados/go/20260825T173713`, commit `2dc2606`.
+**A conclusão anterior desta seção estava errada, e o erro foi meu.** Ela dizia,
+com base numa única execução, que o Go entregava *"a pior cauda das quatro
+stacks"*. Era a **primeira execução da configuração** — exatamente o que a regra
+do projeto manda descartar, e que eu aplico religiosamente na bancada e não
+apliquei aqui.
 
-**Ressalvas, e elas são grandes**: é **uma** execução, a primeira, sem
-aquecimento descartado e sem repetição. A regra do projeto diz que a primeira
-execução de qualquer configuração é sistematicamente mais lenta, e que diferença
-abaixo de ~3% é ruído. Nada abaixo vale como propriedade da stack.
+| execução | instrumentada? | abaixo de 250ms | acima de 250ms | p98 | p99 | máximo |
+| - | - | - | - | - | - | - |
+| `20260825T173713` (**a 1ª de todas**) | não | 98,566% | **882** | 51 ms | 443 ms | 960 ms |
+| `20260825T191408` | **sim** (ver 7.6) | 99,946% | 33 | 5 ms | 147 ms | 296 ms |
+| `20260825T191953` | não | **100,000%** | **0** | **4 ms** | **5 ms** | 216 ms |
+| `20260825T192431` | não | **100,000%** | **0** | **4 ms** | **5 ms** | 207 ms |
 
-| | Django | FastAPI | Elixir | **Go (1 execução)** |
+As duas execuções limpas e aquecidas dão **100% abaixo de 250ms com p98 de 4ms**
+— o melhor resultado das quatro stacks, não o pior:
+
+| | Django | FastAPI | Elixir | **Go** |
 | - | - | - | - | - |
+| abaixo de 250ms | 100% | 100% | ~100% | **100%** |
+| p98 | 7 ms | 5 ms | 5 ms | **4 ms** |
+| máximo | 76–94 ms | 246 ms | 51–101 ms | **207–216 ms** |
+| subida | ~20 s | 7 s | 7 s | **7–8 s** |
 | pontuação | 100.000 | 100.000 | 100.000 | **100.000** |
-| abaixo de 250ms | 100% | 100% | ~100% | **98,57%** |
-| p98 | 7 ms | 5 ms | 5 ms | **51 ms** |
-| p99 | — | — | — | **443 ms** |
-| subida | ~20 s | 7 s | 7 s | **7 s** |
 | inconsistências | 0 | 0 | 0 | **0** |
 
-CPU por requisição, por serviço, na carga real (mesmo instrumento de
-[`elixir/02`](../elixir/02-ocioso-na-carga-real.md)):
+**O que a primeira execução tinha de diferente**, e por que o padrão dela (240
+segundos limpos seguidos de 4 segundos catastróficos) não voltou em nenhuma
+outra: era a primeira vez que aquele volume Docker existia, aquele banco
+escrevia, e aquele binário rodava naquela máquina. O laboratório já tinha a
+regra escrita — *"a primeira execução de qualquer configuração é
+sistematicamente mais lenta"* — e ela vale para a prova oficial tanto quanto
+para o `oha`.
 
-| serviço | Elixir | **Go** | throttling |
+**Ressalva que fica**: o pico continua sem explicação mecânica. Ele não voltou
+em três execuções, mas "não reproduziu" não é o mesmo que "sei o que foi". As
+hipóteses da versão anterior desta seção — checkpoint do Postgres, GC, aquecimento
+de page cache — continuam abertas, e agora com a informação de que o fenômeno é
+de **primeira execução**, o que joga a suspeita para o lado do que só acontece
+uma vez.
+
+Consumo por serviço na carga real, nas duas execuções limpas:
+
+| serviço | Elixir | **Go** (`191953` / `192431`) | % da cota | throttling |
+| - | - | - | - | - |
+| api01 | 297,3 µs | **224,4 / 228,0 µs** | ~14% | 0,0% |
+| api02 | 300,8 µs | **224,9 / 229,1 µs** | ~14% | 0,0% |
+| db | 316,8 µs | **298,3 / 302,8 µs** | ~12% | 0,1% |
+| nginx | 168,4 µs | 174,7 / 178,2 µs | ~44% | 0,1% |
+
+A stack inteira usa ~13% do orçamento de 1.5 CPU na carga que a competição
+aplica, e — como no Elixir — **o nginx é o serviço proporcionalmente mais
+carregado**, com o triplo da ocupação de qualquer outro.
+
+### 7.6 O instrumento entrou na conta: `docker exec` roda dentro do cgroup medido
+
+A execução `20260825T191408` rodou com `scripts/cgroup-serie.sh` amostrando
+`cpu.stat` de todos os serviços a cada segundo. O efeito dele apareceu no
+próprio resultado:
+
+| serviço | sem instrumento | **com instrumento** | inflação |
 | - | - | - | - |
-| api01 | 297,3 µs | **227,1 µs** | **0,0%** |
-| api02 | 300,8 µs | **230,9 µs** | **0,0%** |
-| db | 316,8 µs | 313,4 µs | 0,2% |
-| nginx | 168,4 µs | 180,6 µs | 1,2% |
+| api01 | 224,4 µs | 266,4 µs | +19% |
+| db | 298,3 µs | 414,7 µs | **+39%** |
+| nginx | 174,7 µs | 234,1 µs | +34% |
+| nginx congelado | 0,1% | **20,6%** | — |
 
-Duas leituras opostas, e as duas precisam ficar:
+**`docker exec` cria o processo dentro do cgroup do container alvo.** Cada
+amostra, portanto, gasta a cota *do serviço medido* — e o serviço mais afetado é
+o de menor cota, o nginx com 0.10 CPU, que passou de 0,1% para 20,6% de períodos
+congelados só por ser observado.
 
-**A aplicação é a mais barata das quatro.** 227–231 µs por requisição contra
-297–301 do Elixir, com zero throttling nas duas instâncias. E o custo do banco
-ficou **idêntico** ao do Elixir (313,4 contra 316,8 µs) — o mesmo empate que
-[`elixir/04`, §5.2](../elixir/04-o-statement-que-nao-era-reusado.md) obteve
-entre asyncpg e Postgrex com statements reusados, o que é evidência indireta
-(não prova) de que o pgx está reusando os dele.
+Consequências práticas, e nenhuma delas é "jogar o instrumento fora":
 
-**E a cauda é, de longe, a pior das quatro.** 882 requisições acima de 250ms,
-contra um máximo de 51ms do Elixir na execução equivalente. A margem para a
-multa de SLA é de 0,57 ponto percentual: uma execução um pouco pior custa
-dinheiro, enquanto as outras três têm 2 pontos de folga.
+- A série por segundo serve para achar **quando** algo acontece, jamais para
+  medir **quanto** custa. Está escrito no cabeçalho do script, e agora com
+  número.
+- Para serviços de cota pequena ela é inutilizável mesmo qualitativamente: os
+  33% de "períodos congelados" que ela mostrou no nginx durante a stack
+  **ociosa** eram o próprio `docker exec`.
+- O `cgroup-snapshot.sh` (duas fotos, antes e depois) não tem esse problema, e é
+  por isso que ele é quem alimenta `resultados/`.
 
-**Onde a cauda está**, extraído da série de p99 por segundo do relatório:
-
-```
-segundo   0  -> p99 157ms     (primeira requisição; subida)
-segundos  1..240 -> p99 entre 2 e 53ms
-segundos 241..244 -> p99 538, 635, 875, 946ms
-```
-
-Ou seja: **toda a cauda está nos 4 últimos segundos de um teste de 244**, e o
-resto do tempo a stack responde melhor que o p98 sugere. Não é degradação
-progressiva — a latência não cresce ao longo do teste, o que descartaria
-saturação pelo critério da seção 5 do
-[plano](../../03-plano-implementacao.md).
-
-**Hipóteses, nenhuma medida, e o método ao lado de cada uma** — a regra que o
-[`elixir/04`, §6.3](../elixir/04-o-statement-que-nao-era-reusado.md) deixou:
-
-| hipótese | como decidir |
-| - | - |
-| checkpoint do Postgres no fim da carga | `log_checkpoints` e o horário no log do banco |
-| GC do Go num heap que cresceu durante o teste | `GODEBUG=gctrace=1` numa execução, e a variante `GOMEMLIMIT` |
-| throttling concentrado no fim (nginx marcou 1,2%) | snapshot de `cpu.stat` por serviço a cada segundo, não só no fim |
-| artefato do encerramento do próprio Gatling | repetir a execução e ver se o pico acompanha o fim ou o relógio |
-
-A quarta é a mais barata de testar e a que mais mudaria a leitura, então é a
-primeira. **Enquanto isso, o p98 de 51ms desta stack não deve ser comparado com
-os 5ms das outras**: são números com formas diferentes, e a média esconde isso.
-
-### 7.6 O que ainda não foi medido
+### 7.7 O que ainda não foi medido
 
 Custo por requisição **na bancada** (o número comparável entre projetos),
 comportamento sob saturação, memória sob carga, e as variantes `GOMAXPROCS`,

@@ -179,9 +179,11 @@ ficam mais baratos porque a aplicação é compilada.
       × 2, banco 0.60) foi obtida com o Django, cuja API custava 862 µs. Com uma
       API de 303 µs, o experimento `E3` do
       [plano](../../03-plano-implementacao.md) deixa de ser hipotético.
-- [ ] **Explicar a cauda da prova oficial** — 882 requisições acima de 250ms,
-      todas nos 4 últimos segundos ([`00`, §7.5](./00-indice.md)). Nada neste
-      experimento a explica: sob bancada o p99 fica em 94–97ms e estável.
+- [x] **A cauda da prova oficial era de primeira execução.** Três execuções
+      depois, duas delas limpas, o resultado é 100% abaixo de 250ms com p98 de
+      4ms ([`00`, §7.5](./00-indice.md)). O que este experimento já dizia —
+      p99 de 94–97ms estável sob saturação — não combinava com uma stack de
+      cauda ruim, e não combinava mesmo.
 - [ ] **Comparar o custo de banco da leitura entre Go e Elixir** com o mesmo
       instrumento de diagnóstico. 165,9–224,5 µs contra 120,7 µs merece
       verificação, e a diferença pode ser inteiramente efeito da saturação — o

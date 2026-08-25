@@ -429,6 +429,15 @@ aparece em relatório técnico.
   na própria página. **Somar API e banco numa métrica só escondeu onde estava o
   custo.**
 
+- **"O Go entrega a pior cauda das quatro stacks."** Afirmado com número
+  (98,57% abaixo de 250ms, 882 requisições lentas) a partir de **uma execução**
+  — que era a **primeira execução daquela stack na máquina**. Três execuções
+  depois: 99,95%, 100% e 100%, com p98 de 4ms, o **melhor** das quatro. A regra
+  "descartar a rodada de aquecimento" está escrita no `CLAUDE.md`, eu a aplico
+  em toda série de `oha`, e não a apliquei à prova oficial — que custa 4 minutos
+  e por isso convida a rodar uma vez só. Medido em
+  `performance/go/00-indice.md`, seção 7.5.
+
 - **"Uma porta Go sem `GOMAXPROCS` ajustado subiria 20 threads disputando 0.40
   CPU, e teria cauda pior que o Django."** Previsão de
   `performance/django/06`, seção 8, **morta pela versão da linguagem** antes de
@@ -505,6 +514,21 @@ comportamento de um runtime como universal foi o que produziu a previsão errada
 sobre a BEAM — e produziu de novo a do `GOMAXPROCS` para o Go, que o 1.27
 neutraliza lendo a cota do cgroup (`runtime/cgroup_linux.go:85-92`). Duas
 previsões, dois runtimes, a mesma causa: supor que o runtime não aprendeu.
+
+**Regra derivada**: **a regra do aquecimento vale para a prova oficial também.**
+Ela nasceu na bancada, onde uma rodada custa 10 segundos e repetir é barato. A
+simulação do Gatling custa 4 minutos, e foi exatamente por isso que rodei uma
+vez só e escrevi uma conclusão que três execuções derrubaram. O custo de uma
+medição não muda o que ela vale.
+
+**Regra derivada**: **`docker exec` roda DENTRO do cgroup do container medido.**
+Um amostrador que fotografa `cpu.stat` por segundo gasta a cota do serviço
+observado: numa execução instrumentada, o nginx (0.10 CPU) saltou de 0,1% para
+20,6% de períodos congelados, e o custo por requisição de todos os serviços
+inflou de 19% a 39%. Instrumento de amostragem contínua serve para achar
+**quando**, nunca para medir **quanto** — e é inutilizável em serviço de cota
+pequena. As duas fotos de `cgroup-snapshot.sh`, antes e depois, não têm esse
+problema.
 
 **Regra derivada**: **quando o gargalo muda de serviço, a comparação anterior
 deixa de valer.** Duas linhas com o mesmo endpoint e a mesma cota podem estar
