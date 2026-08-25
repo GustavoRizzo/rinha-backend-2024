@@ -8,7 +8,7 @@ FastAPI não é continuação do 06 do Django, é o primeiro de outra linha.
 | - | - | - |
 | [django/](./django/00-indice.md) | 01 a 06 | **concluídos** — USD 100.000, zero inconsistências |
 | [fastapi/](./fastapi/00-indice.md) | 01 a 03 | **concluídos** — 1,73x na escrita, 4,00x na leitura |
-| [elixir/](./elixir/00-indice.md) | 01 a 03 | **em andamento** — escala melhor e gasta mais; o excesso está no **banco** |
+| [elixir/](./elixir/00-indice.md) | 01 a 04 | **em andamento** — o **mais barato dos três** depois que o 04 derrubou um erro meu |
 
 A convenção de escrita está descrita em
 `.claude/memory/documentacao-testes-performance.md`.

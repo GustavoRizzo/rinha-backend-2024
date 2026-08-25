@@ -395,6 +395,18 @@ aparece em relatório técnico.
   na própria página. **Somar API e banco numa métrica só escondeu onde estava o
   custo.**
 
+- **"`prepare: :named` mantém os statements em cache, sem pagar parse+plan por
+  requisição."** Escrito num comentário de `elixir/lib/rinha/config.ex` com a
+  confiança de quem conferiu, sem ter conferido. É falso: `Postgrex.query/4` sem
+  `:cache_statement` monta um `%Query{name: ""}` — statement **sem nome**, que o
+  Postgres prepara e descarta a cada chamada
+  (`deps/postgrex/lib/postgrex.ex:339`). Medido com `pg_stat_statements`:
+  `plans = calls` e **62,2% do tempo de banco gasto planejando**, contra ZERO do
+  asyncpg. Corrigido, a leitura ficou **3,97x mais barata no banco** e o Elixir
+  passou de "mais caro que o FastAPI" para o **mais barato dos três**. Duas
+  conclusões de documento tiveram de ser invertidas. Ver
+  `performance/elixir/04`.
+
 - **"O nginx virou o gargalo da leitura."** Afirmado a partir de 87–93% de
   períodos congelados no cgroup dele. Soltar a cota de 0.15 para 0.40 rendeu
   2,6% — dentro do ruído. Ele saturava a própria cota sem ser o limite do
@@ -416,6 +428,18 @@ Gatling responde "como se comporta no que chega" — e a segunda é quem decide.
 períodos congelados diz que um serviço satura a *sua* cota, não que ele seja a
 parede. A prova é operacional: solte a cota daquele serviço e veja se a vazão
 sobe. Se não subir, ele não era o gargalo.
+
+**Regra derivada**: **quando a hipótese vier com o método ao lado, execute o
+método.** O achado dos "479 µs de CPU de banco" foi registrado com a solução
+escrita junto (*"`pg_stat_statements` comparando `plans` com `calls`"*), e
+seguiram-se dois documentos e nove séries apoiados na conclusão errada. Executar
+o método custou dois comandos e cinco minutos, e a resposta era binária.
+
+**Regra derivada**: **um comentário de código com um número dentro não é uma
+medição.** O comentário errado do `config.ex` citava a opção certa, descrevia um
+comportamento plausível e concluía o oposto do que a opção faz. Ele sobreviveu a
+três experimentos porque *parecia* verificado. A regra do `CLAUDE.md` — citar
+arquivo e linha do fonte — existe exatamente para isso, e não foi seguida.
 
 **Regra derivada**: **medir por serviço, não por sistema.** Uma métrica que
 soma aplicação e banco responde "quanto custa", nunca "onde custa" — e as duas

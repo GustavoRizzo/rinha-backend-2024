@@ -17,6 +17,15 @@ Este experimento também estreia o instrumento que faltava: a coleta de
 
 ## 1. Ressalvas metodológicas
 
+> ⚠️ **Os números desta página são ANTERIORES à correção do experimento
+> [04](./04-o-statement-que-nao-era-reusado.md).** O Postgrex estava
+> replanejando cada statement a cada requisição — um bug de configuração, não
+> uma propriedade da linguagem. Com a correção, o custo de banco cai até 3,97x e
+> **as conclusões comparativas desta página se invertem**. A página fica como
+> está, com o commit medido ao lado de cada número: é registro do que foi
+> medido, não do que é verdade hoje.
+
+
 1. **Uma execução.** Os percentuais de ocupação são estáveis o bastante para a
    conclusão qualitativa ("ninguém satura"), mas os valores exatos não foram
    repetidos.

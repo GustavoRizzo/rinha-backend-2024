@@ -1,7 +1,7 @@
 # Rinha de Backend 2024/Q1 — laboratório de estudo
 
 Três implementações da [Rinha de Backend 2024/Q1](https://github.com/zanfranceschi/rinha-de-backend-2024-q1)
-— **Django**, **FastAPI** e **Elixir** — com **nove experimentos de desempenho**
+— **Django**, **FastAPI** e **Elixir** — com **doze experimentos de desempenho**
 medindo cada decisão de arquitetura sob as restrições da competição.
 
 As três marcam a pontuação máxima. A comparação interessante não é essa: é o
@@ -17,18 +17,20 @@ limitação de recursos, usando as regras da Rinha como especificação.
 | - | - | - | - |
 | Pontuação | **USD 100.000** (9 execuções) | **USD 100.000** | **USD 100.000** |
 | Requisições abaixo de 250ms | 100% (SLA exige 98%) | 100% | 100% |
-| p98 | 7ms (SLA exige < 250ms) | 5ms | 6ms |
-| Máximo | 76–94ms | 246ms | 101ms |
+| p98 | 7ms (SLA exige < 250ms) | 5ms | 5ms |
+| Máximo | 76–94ms | 246ms | **51ms** |
 | Inconsistências de saldo | zero em +550 mil requisições | zero | zero |
 | Subida da stack | ~20s (limite: 40s) | 7s | **4s** |
 | Recursos | 1.50 CPU e 550MB | 1.50 CPU e 550MB | 1.50 CPU e 550MB |
-| **CPU por requisição, escrita** | 862 µs | **500 µs** | 549 µs |
-| **CPU por requisição, leitura** | 1258 µs | **314 µs** | 395 µs |
+| **CPU por requisição, escrita** | 862 µs | 499 µs | **462 µs** |
+| **CPU por requisição, leitura** | 1258 µs | 251 µs | **158 µs** |
 
-> A coluna do Elixir é a que mais contraria a expectativa registrada: a previsão
-> escrita em 2026-08-22 o colocava **à frente** do FastAPI, e ele ficou 9,8%
-> atrás na escrita e 25,6% atrás na leitura. Ver
-> [`performance/elixir/01`](./.claude/docs/performance/elixir/01-a-beam-sob-cota.md).
+> A coluna do Elixir só chegou a esses números depois de um erro meu ser
+> derrubado por medição. Por três experimentos ele apareceu como o **mais caro**
+> dos três, e a causa era uma opção do driver que eu documentei sem conferir no
+> fonte: cada statement era **replanejado a cada requisição**, e 62,2% do
+> trabalho do banco era planejamento. Ver
+> [`performance/elixir/04`](./.claude/docs/performance/elixir/04-o-statement-que-nao-era-reusado.md).
 
 **A pontuação satura e as três colunas empatam nela.** Com 35x a 50x de folga
 contra o SLA, toda configuração razoável marca o teto — não existe nota acima
@@ -137,6 +139,9 @@ números, o commit exato medido e os comandos para replicar.
 | [fastapi/02](./.claude/docs/performance/fastapi/02-onde-esta-o-gargalo.md) | Onde está o gargalo | Uma repartição **1,54x melhor na bancada** entregou cauda **pior** na prova oficial — a bancada mede saturação, a Rinha não satura |
 | [fastapi/03](./.claude/docs/performance/fastapi/03-o-que-a-troca-de-framework-comprou.md) | O que a troca de framework comprou | Fechamento do projeto: o que foi medido, o que foi suposto, e o que a próxima linguagem precisa manter idêntico |
 | [elixir/01](./.claude/docs/performance/elixir/01-a-beam-sob-cota.md) | A BEAM sob cota de cgroup | As duas armadilhas previstas **não aparecem**: o OTP 27 lê a cota e se dimensiona sozinho. Sem cota, elas custam **2,16x** |
+| [elixir/02](./.claude/docs/performance/elixir/02-ocioso-na-carga-real.md) | Ocioso por serviço na carga real | Ninguém passa de 42% da própria cota: **não há o que redistribuir**, e a tensão que a bancada mostrava era artefato da saturação |
+| [elixir/03](./.claude/docs/performance/elixir/03-sem-cota-varios-nucleos.md) | As três stacks sem limitação de hardware | 1 processo CPython satura **exatamente 1,01 núcleo** — o GIL, medido. Um nó da BEAM espalha por 5,8 sem configuração |
+| [elixir/04](./.claude/docs/performance/elixir/04-o-statement-que-nao-era-reusado.md) | O statement que não era reusado | `plans = calls`: **62,2% do tempo de banco era planejamento**. Uma opção de uma linha inverteu a conclusão de três experimentos |
 | [fastapi/03](./.claude/docs/performance/fastapi/03-o-que-a-troca-de-framework-comprou.md) | Fechamento | O ganho que dá para atribuir ao framework é **1,73x**, não 4x: o resto era **ORM no caminho quente**, e isso o Django também poderia ter tirado |
 
 Material de apoio em [`.claude/docs/`](./.claude/docs/):
@@ -228,7 +233,7 @@ Dockerfile usa para compilar. Não é preciso instalar Erlang nem Elixir.
 │  └─ performance/            um diretório por projeto, um arquivo por experimento
 │     ├─ django/              experimentos 01 a 06
 │     ├─ fastapi/             experimentos 01 a 03
-│     └─ elixir/              experimento 01
+│     └─ elixir/              experimentos 01 a 04
 ├─ django/                    implementação em Django + Gunicorn + psycopg
 │  ├─ crebitos/               modelo, views, testes, hacks isolados
 │  ├─ docker-compose.yml      a stack da competição

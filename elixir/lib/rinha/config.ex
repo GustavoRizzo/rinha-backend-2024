@@ -64,9 +64,15 @@ defmodule Rinha.Config do
       # As conexões vivem pelo tempo de vida do processo. `django/04` mediu
       # 4,75x entre conexão persistente e conexão nova por requisição.
       #
-      # `prepare: :named` (padrão do Postgrex) mantém os statements preparados
-      # em cache por conexão: as 5 queries deste projeto são preparadas uma vez
-      # e reexecutadas, sem pagar parse+plan por requisição.
+      # CUIDADO: esta opção NÃO é o que faz os statements serem reusados.
+      #
+      # O comentário que estava aqui afirmava que ela "mantém os statements
+      # preparados em cache por conexão, sem pagar parse+plan por requisição".
+      # É falso, custou 3,97x de CPU de banco na leitura e sobreviveu a três
+      # experimentos porque parecia verificado. `:prepare` decide se queries
+      # preparadas por `Postgrex.prepare/4` ganham NOME; quem faz
+      # `Postgrex.query/4` reusar é a opção `:cache_statement` de cada chamada,
+      # em `Rinha.Dominio`. Ver `performance/elixir/04`.
       prepare: :named,
       # Sem log de query, pelo mesmo motivo do `access_log off`.
       show_sensitive_data_on_connection_error: false,

@@ -14,6 +14,15 @@ não previsto — a leitura com query única sai **limitada pelo banco**, gastan
 
 ## 1. Ressalvas metodológicas
 
+> ⚠️ **Os números desta página são ANTERIORES à correção do experimento
+> [04](./04-o-statement-que-nao-era-reusado.md).** O Postgrex estava
+> replanejando cada statement a cada requisição — um bug de configuração, não
+> uma propriedade da linguagem. Com a correção, o custo de banco cai até 3,97x e
+> **as conclusões comparativas desta página se invertem**. A página fica como
+> está, com o commit medido ao lado de cada número: é registro do que foi
+> medido, não do que é verdade hoje.
+
+
 Antes de qualquer número, o que este teste **não** mede.
 
 1. **Não é "Elixir vs. Python" puro.** Mudam linguagem, máquina virtual,
