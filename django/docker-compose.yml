@@ -58,6 +58,10 @@ services:
       - WEB_SERVER=${API_SERVER:-gunicorn-sync}
       - WEB_THREADS=${API_THREADS:-4}
       - DB_POOL=${DB_POOL:-0}
+      # Variantes de `performance/django/07`. Os padrões preservam o
+      # comportamento com que todas as séries anteriores foram medidas.
+      - DB_PREPARED=${DB_PREPARED:-0}
+      - DB_HEALTH_CHECKS=${DB_HEALTH_CHECKS:-1}
       - GUNICORN_BIND=unix:/sockets/api01.sock
     volumes:
       - sockets:/sockets
@@ -79,6 +83,10 @@ services:
       - WEB_SERVER=${API_SERVER:-gunicorn-sync}
       - WEB_THREADS=${API_THREADS:-4}
       - DB_POOL=${DB_POOL:-0}
+      # Variantes de `performance/django/07`. Os padrões preservam o
+      # comportamento com que todas as séries anteriores foram medidas.
+      - DB_PREPARED=${DB_PREPARED:-0}
+      - DB_HEALTH_CHECKS=${DB_HEALTH_CHECKS:-1}
       - GUNICORN_BIND=unix:/sockets/api02.sock
 
   nginx:

@@ -115,9 +115,38 @@ if os.environ.get("DB_HOST"):
             ),
             # Sem isto, uma conexão persistente derrubada pelo servidor só é
             # descoberta quando a query falha.
-            "CONN_HEALTH_CHECKS": True,
+            #
+            # O CUSTO, medido em `performance/django/07`: um `SELECT 1` por
+            # requisição, que aparece no `pg_stat_statements` com exatamente uma
+            # chamada por requisição do endpoint. Vira variante para a conta
+            # ficar explícita.
+            "CONN_HEALTH_CHECKS": os.environ.get("DB_HEALTH_CHECKS", "1") == "1",
             "OPTIONS": {
                 "connect_timeout": 2,
+                # PREPARED STATEMENTS.
+                #
+                # O Django os DESLIGA por padrão, e não é acidente:
+                # `django/db/backends/postgresql/base.py:310-314` faz
+                # `conn_params["prepare_threshold"] = ... None`, com o
+                # comentário "Disable prepared statements by default to keep
+                # connection poolers working" — um pgbouncer em modo transaction
+                # quebra com statements nomeados.
+                #
+                # Consequência medida em `performance/django/07`: `plans =
+                # calls` nos dois endpoints, com 44% a 54% do tempo de banco
+                # gasto PLANEJANDO. É o mesmo achado de
+                # `performance/elixir/04`, com outro driver.
+                #
+                # Não basta `prepare_threshold`: o cursor padrão do Django é o
+                # `ClientCursor` (mesma função, linhas 289-296), que interpola
+                # os parâmetros no texto do SQL e por isso nunca chega a usar
+                # statement nomeado. `server_side_binding` é o que troca o
+                # cursor.
+                **(
+                    {"prepare_threshold": 5, "server_side_binding": True}
+                    if os.environ.get("DB_PREPARED", "0") == "1"
+                    else {}
+                ),
                 **(
                     {
                         "pool": {

@@ -52,5 +52,10 @@ perfil_sufixo_servidor() {
     [[ "$SERVIDOR" == "gunicorn-gthread" ]] && sufixo="gthread${THREADS}t"
     [[ "$SERVIDOR" == "gunicorn-sync" ]] && sufixo="sync"
     [[ "${BENCH_POOL:-0}" == "1" ]] && sufixo="${sufixo}-pool"
+    # Variantes de `performance/django/07`. Só entram no slug quando diferem do
+    # padrão: as séries publicadas foram todas medidas com os padrões, e mudar
+    # o nome delas invalidaria os documentos que as citam.
+    [[ "${DB_PREPARED:-0}" == "1" ]] && sufixo="${sufixo}-prep"
+    [[ "${DB_HEALTH_CHECKS:-1}" == "0" ]] && sufixo="${sufixo}-nohc"
     printf '%s' "$sufixo"
 }
