@@ -17,8 +17,8 @@ de recursos.
 
 ## Estado atual
 
-**Quatro implementações, treze experimentos, as quatro passando na prova oficial
-com pontuação máxima e zero inconsistências.**
+**Quatro implementações, dezesseis experimentos, as quatro passando na prova
+oficial com pontuação máxima e zero inconsistências.**
 
 - [x] Documentação base (docs 01 a 05) e diário de aprendizados
 - [x] Modelo de domínio, endpoints e 177 testes automatizados (64 no Django,
@@ -54,6 +54,12 @@ com pontuação máxima e zero inconsistências.**
       **302,9 µs na escrita e 91–109 µs na leitura**, a mais barata das quatro —
       e o `diag-prepared` refutou o replanejamento de statements (48 planos para
       36.014 chamadas)
+- [x] Variantes do Go medidas ([`go/02`](./performance/go/02-tirando-proveito-da-stack.md)):
+      a bancada elege `GOMAXPROCS=1` (20% menos CPU/req) e a **prova oficial
+      recusa** — mesmo padrão de `fastapi/02`
+- [x] Comparativo das quatro stacks [sob cota](./performance/go/03-quatro-stacks-quatro-linguagens.md)
+      e [sem cota](./performance/go/04-sem-cota.md), com **contagem de linhas de
+      código** (`just codigo`)
 - [ ] **Redistribuir a cota com o Go**: a repartição atual foi obtida com uma API
       que custava 862 µs; a de agora custa 303 µs e o banco satura primeiro na
       leitura

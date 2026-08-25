@@ -6,6 +6,9 @@ experimento 01 do Go **não** é continuação do 04 do Elixir.
 | # | Experimento | Data | Estado |
 | - | - | - | - |
 | [01](./01-a-aplicacao-sai-da-frente.md) | A aplicação sai da frente: **a mais barata das quatro** nos dois endpoints, e na leitura **o banco vira a parede** (93,5% de throttling) | 2026-08-25 | **concluído** |
+| [02](./02-tirando-proveito-da-stack.md) | As variantes, medidas: a bancada elege `GOMAXPROCS=1` e **a prova oficial recusa** | 2026-08-25 | **concluído** |
+| [03](./03-quatro-stacks-quatro-linguagens.md) | As quatro stacks sob a cota da Rinha, **e quanto código cada uma custou** | 2026-08-25 | **concluído** |
+| [04](./04-sem-cota.md) | As quatro sem limitação de hardware, em 20 vCPU | 2026-08-25 | **concluído** |
 
 A prova oficial marcou USD 100.000 com zero inconsistências em quatro execuções.
 As duas limpas e aquecidas deram **100% abaixo de 250ms e p98 de 4ms** — o melhor
