@@ -515,6 +515,14 @@ bench-sem-cota:
     done
     just bench-tabela
 
+# DIAGNÓSTICO (fora da metodologia de medição): os statements estão sendo
+# reusados ou replanejados? Decide a hipótese aberta em performance/elixir/01,
+# seção 5.4, comparando `plans` com `calls` no pg_stat_statements.
+[group('bench')]
+diag-prepared proj endpoint="extrato":
+    @bash {{RAIZ}}/scripts/diag-prepared.sh {{proj}} {{endpoint}}
+
+
 # imprime a tabela comparativa das séries já executadas
 [group('bench')]
 bench-tabela:

@@ -1,0 +1,16 @@
+# Override de DIAGNÓSTICO: liga o pg_stat_statements no banco do rig.
+#
+# Serve a uma pergunta só, aberta em `performance/elixir/01`: o Elixir gasta
+# 1,36x a 3,47x mais CPU de Postgres que o FastAPI, com SQL idêntico. A hipótese
+# é que os statements estejam sendo REPLANEJADOS a cada requisição em vez de
+# reusados, e a coluna `plans` de `pg_stat_statements` decide isso.
+#
+# FORA da metodologia de medição: o próprio pg_stat_statements custa CPU. Nada
+# medido com este override entra em `resultados/`.
+services:
+  db:
+    volumes:
+      - ../infra/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ../infra/postgres/postgresql-diag.conf:/etc/postgresql/postgresql-diag.conf:ro
+      - ../infra/sql:/docker-entrypoint-initdb.d:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql-diag.conf
