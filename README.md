@@ -1,10 +1,10 @@
 # Rinha de Backend 2024/Q1 — laboratório de estudo
 
-Três implementações da [Rinha de Backend 2024/Q1](https://github.com/zanfranceschi/rinha-de-backend-2024-q1)
-— **Django**, **FastAPI** e **Elixir** — com **doze experimentos de desempenho**
-medindo cada decisão de arquitetura sob as restrições da competição.
+Quatro implementações da [Rinha de Backend 2024/Q1](https://github.com/zanfranceschi/rinha-de-backend-2024-q1)
+— **Django**, **FastAPI**, **Elixir** e **Go** — com **dezoito experimentos de
+desempenho** medindo cada decisão de arquitetura sob as restrições da competição.
 
-As três marcam a pontuação máxima. A comparação interessante não é essa: é o
+As quatro marcam a pontuação máxima. A comparação interessante não é essa: é o
 **custo em CPU por requisição**, que a pontuação não enxerga porque satura.
 
 A competição encerrou em março de 2024. **Este repositório não é uma submissão** —
@@ -13,17 +13,25 @@ limitação de recursos, usando as regras da Rinha como especificação.
 
 ## Resultado
 
-| | Django | FastAPI | Elixir |
-| - | - | - | - |
-| Pontuação | **USD 100.000** (9 execuções) | **USD 100.000** | **USD 100.000** |
-| Requisições abaixo de 250ms | 100% (SLA exige 98%) | 100% | 100% |
-| p98 | 7ms (SLA exige < 250ms) | 5ms | 5ms |
-| Máximo | 76–94ms | 246ms | **51ms** |
-| Inconsistências de saldo | zero em +550 mil requisições | zero | zero |
-| Subida da stack | ~20s (limite: 40s) | 7s | **4s** |
-| Recursos | 1.50 CPU e 550MB | 1.50 CPU e 550MB | 1.50 CPU e 550MB |
-| **CPU por requisição, escrita** | 862 µs | 499 µs | **462 µs** |
-| **CPU por requisição, leitura** | 1258 µs | 251 µs | **158 µs** |
+| | Django | FastAPI | Elixir | **Go** |
+| - | - | - | - | - |
+| Pontuação | **USD 100.000** (9 execuções) | **USD 100.000** | **USD 100.000** | **USD 100.000** (5 execuções) |
+| Requisições abaixo de 250ms | 100% (SLA exige 98%) | 100% | 100% | 100% |
+| p98 | 7ms (SLA exige < 250ms) | 5ms | 5ms | **4ms** |
+| Máximo | 76–94ms | 246ms | **51ms** | 104–216ms |
+| Inconsistências de saldo | zero em +550 mil requisições | zero | zero | zero |
+| Subida da stack | ~20s (limite: 40s) | 7s | **4s** | 7–8s |
+| Recursos | 1.50 CPU e 550MB | 1.50 CPU e 550MB | 1.50 CPU e 550MB | 1.50 CPU e 550MB |
+| **CPU por requisição, escrita** | 856 µs | 512 µs | 444 µs | **323 µs** |
+| **CPU por requisição, leitura** | 1224 µs | 257 µs | 158 µs | **105 µs** |
+| **Vazão sem cota, escrita** | 928 rps | 2.211 | 2.762 | **3.589** |
+| **Vazão sem cota, leitura** | 768 rps | 4.410 | 16.454 | **21.737** |
+| **Linhas de código (app)** | **289** | 318 | 442 | 688 |
+
+> As quatro colunas de CPU vêm de séries re-executadas **no mesmo commit, no
+> mesmo dia e no mesmo host** (`2b408eb`) — 8 séries sob cota e 16 sem cota. Ver
+> [`performance/go/03`](./.claude/docs/performance/go/03-quatro-stacks-quatro-linguagens.md)
+> e [`go/04`](./.claude/docs/performance/go/04-sem-cota.md).
 
 > A coluna do Elixir só chegou a esses números depois de um erro meu ser
 > derrubado por medição. Por três experimentos ele apareceu como o **mais caro**
@@ -32,11 +40,17 @@ limitação de recursos, usando as regras da Rinha como especificação.
 > trabalho do banco era planejamento. Ver
 > [`performance/elixir/04`](./.claude/docs/performance/elixir/04-o-statement-que-nao-era-reusado.md).
 
-**A pontuação satura e as três colunas empatam nela.** Com 35x a 50x de folga
+**A pontuação satura e as quatro colunas empatam nela.** Com 35x a 60x de folga
 contra o SLA, toda configuração razoável marca o teto — não existe nota acima
-de USD 100.000. O que separa as implementações é o teto de vazão: 1,73x na
-escrita e 4,00x na leitura entre Django e FastAPI, medidos em
-[`performance/fastapi/01`](./.claude/docs/performance/fastapi/01-fastapi-async.md).
+de USD 100.000. O que separa as implementações é o custo por requisição: **2,65x
+na escrita e 11,64x na leitura** entre Django e Go.
+
+E a pergunta que o projeto acabou respondendo de brinde: *linguagem que ajuda
+mais o programador tende a ser pior em desempenho?* A correlação aparece nas
+pontas — o Django escreve 2,4x menos código e paga 2,65x mais CPU — **e some no
+meio**: o FastAPI escreve menos que o Elixir e é quase tão rápido. Um quarto das
+688 linhas do Go são blocos `if erro != nil`. Ver
+[`go/03`, §5](./.claude/docs/performance/go/03-quatro-stacks-quatro-linguagens.md).
 
 ### A melhor execução
 
@@ -142,6 +156,12 @@ números, o commit exato medido e os comandos para replicar.
 | [elixir/02](./.claude/docs/performance/elixir/02-ocioso-na-carga-real.md) | Ocioso por serviço na carga real | Ninguém passa de 42% da própria cota: **não há o que redistribuir**, e a tensão que a bancada mostrava era artefato da saturação |
 | [elixir/03](./.claude/docs/performance/elixir/03-sem-cota-varios-nucleos.md) | As três stacks sem limitação de hardware | 1 processo CPython satura **exatamente 1,01 núcleo** — o GIL, medido. Um nó da BEAM espalha por 5,8 sem configuração |
 | [elixir/04](./.claude/docs/performance/elixir/04-o-statement-que-nao-era-reusado.md) | O statement que não era reusado | `plans = calls`: **62,2% do tempo de banco era planejamento**. Uma opção de uma linha inverteu a conclusão de três experimentos |
+| [django/07](./.claude/docs/performance/django/07-o-django-tambem-nao-reusava.md) | O Django também não reusava | O **mesmo defeito** do elixir/04 — e custou **~0**, porque no Django o gargalo é a API e o banco está ocioso |
+| [go/01](./.claude/docs/performance/go/01-a-aplicacao-sai-da-frente.md) | A aplicação sai da frente | Primeira stack do laboratório em que **o Postgres vira a parede**: API a 0,9% de saturação, banco a 92,7% |
+| [go/02](./.claude/docs/performance/go/02-tirando-proveito-da-stack.md) | As variantes do Go, medidas | A bancada elege `GOMAXPROCS=1` (20% menos CPU) e **a prova oficial recusa** — folga é amortecedor de cauda |
+| [go/03](./.claude/docs/performance/go/03-quatro-stacks-quatro-linguagens.md) | As quatro sob a cota da Rinha | Comparativo completo **+ linhas de código**: a correlação "mais ajuda, menos desempenho" só vale nas pontas |
+| [go/04](./.claude/docs/performance/go/04-sem-cota.md) | As quatro sem limitação | Go na frente nos quatro cenários; e **paralelismo não resolve serialização** — três das quatro pioram na escrita com a máquina inteira |
+| [go/05](./.claude/docs/performance/go/05-bloco-b-estrategias-de-concorrencia.md) | **Bloco B**: estratégias de concorrência | `UPDATE ... RETURNING` vence — por **9% a 15%**, não "por larga margem". Contra a otimista, 3,57x |
 | [fastapi/03](./.claude/docs/performance/fastapi/03-o-que-a-troca-de-framework-comprou.md) | Fechamento | O ganho que dá para atribuir ao framework é **1,73x**, não 4x: o resto era **ORM no caminho quente**, e isso o Django também poderia ter tirado |
 
 Material de apoio em [`.claude/docs/`](./.claude/docs/):
@@ -165,7 +185,8 @@ just doctor       # confere tudo de uma vez
 
 - Docker Engine + Compose v2
 - [`just`](https://github.com/casey/just), [`uv`](https://docs.astral.sh/uv/), JDK 17+
-  (Erlang/Elixir **não** são necessários: o projeto `elixir/` compila e testa em container)
+  (Erlang/Elixir e Go **não** são necessários: os projetos `elixir/` e `go/`
+  compilam e testam em container)
 - [`oha`](https://github.com/hatoo/oha) para os comparativos rápidos: `cargo install oha`
 - O Gatling **não precisa ser instalado**: o projeto Maven em [`gatling/`](./gatling/) traz tudo
 

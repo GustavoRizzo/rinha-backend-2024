@@ -8,8 +8,19 @@ Cada entrada segue o mesmo formato: qual premissa do desafio o atalho explora, o
 que se ganha, o que se perde, e onde ele vive no código — para ser fácil de
 desligar numa comparação A/B ou apagar de vez.
 
-Convenção adotada: código de atalho fica isolado em `crebitos/hacks.py`, e os
-testes que o cobrem em `crebitos/tests_hacks.py`. Comentários no código apontam
+Convenção adotada: código de atalho fica isolado num arquivo só por stack, e os
+testes que o cobrem ficam separados. **Os quatro projetos usam os mesmos hacks,
+com o mesmo nome, no mesmo lugar** — se uma stack ganhasse por ter um atalho a
+mais, a diferença medida não seria da linguagem:
+
+| stack | arquivo |
+| - | - |
+| Django | `django/crebitos/hacks.py` + `tests_hacks.py` |
+| FastAPI | `fastapi/app/hacks.py` |
+| Elixir | `elixir/lib/rinha/hacks.ex` |
+| Go | `go/hacks.go` |
+
+Comentários no código apontam
 para cá em vez de repetir a justificativa.
 
 ---

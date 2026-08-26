@@ -61,7 +61,7 @@ razoável marca USD 100.000. Ela aprova, não compara.
 ### Documentação de experimentos
 
 Um arquivo por experimento em `.claude/docs/performance/<projeto>/` — um
-diretório por pasta de framework (`django/`, `fastapi/`), cada um com seu
+diretório por pasta de framework (`django/`, `fastapi/`, `elixir/`, `go/`), cada um com seu
 índice. A numeração é **cronológica**, reinicia em cada projeto e pode ser
 renumerada; ao citar experimento de outro projeto, use o caminho (`django/06`).
 
@@ -71,8 +71,8 @@ dos números de propósito: o gráfico sobrevive, o contexto some.
 
 Aprendizados que valem além de um experimento vão para
 `04-aprendizados.md`. Atalhos que só existem por ser competição vão para
-`05-hacks-da-competicao.md`, isolados em `django/crebitos/hacks.py` e
-`tests_hacks.py`.
+`05-hacks-da-competicao.md`, isolados num arquivo `hacks.*` por stack — os
+mesmos atalhos nas quatro, com o mesmo nome.
 
 ### Código
 
