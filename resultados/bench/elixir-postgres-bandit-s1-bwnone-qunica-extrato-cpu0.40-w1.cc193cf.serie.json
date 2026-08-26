@@ -4,7 +4,7 @@
   "duracao": "10s",
   "modelo_de_carga": "fechado(saturacao)",
   "concorrencia": 50,
-  "git_commit": "2b408eb",
+  "git_commit": "cc193cf",
   "git_sujo": false,
   "ferramenta": "oha 1.15.0",
   "host": {
@@ -16,95 +16,95 @@
   "repeticoes": 5,
   "aquecimento_descartado": true,
   "rps": {
-    "mediana": 2608.18,
-    "min": 2577.84,
-    "max": 2709.17,
-    "amplitude_pct": 5.04
+    "mediana": 2610.45,
+    "min": 2539.68,
+    "max": 2636.08,
+    "amplitude_pct": 3.69
   },
   "p50_ms": {
-    "mediana": 6.92,
-    "min": 6.88,
-    "max": 7.01,
-    "amplitude_pct": 1.98
+    "mediana": 6.88,
+    "min": 6.86,
+    "max": 7.04,
+    "amplitude_pct": 2.54
   },
   "p99_ms": {
-    "mediana": 76.17,
-    "min": 75.43,
-    "max": 77.11,
-    "amplitude_pct": 2.2
+    "mediana": 76.87,
+    "min": 75.81,
+    "max": 77.98,
+    "amplitude_pct": 2.83
   },
   "codigos": {
-    "200": 25733
+    "200": 26339
   },
   "rps_por_repeticao": [
-    2577.8,
-    2588.6,
-    2608.2,
-    2709.2,
-    2641.3
+    2636.1,
+    2589.7,
+    2611.0,
+    2610.4,
+    2539.7
   ],
   "cgroup": {
     "cpu_usado_s": {
-      "mediana": 4.09,
-      "min": 4.09,
-      "max": 4.1,
-      "amplitude_pct": 0.44
+      "mediana": 4.08,
+      "min": 4.08,
+      "max": 4.12,
+      "amplitude_pct": 0.98
     },
     "cpu_us_por_request": {
-      "mediana": 157.5,
-      "min": 151.1,
-      "max": 159.5,
-      "amplitude_pct": 5.33
+      "mediana": 157.9,
+      "min": 154.7,
+      "max": 160.7,
+      "amplitude_pct": 3.8
     },
     "nr_throttled": {
       "mediana": 100,
       "min": 100,
-      "max": 100,
-      "amplitude_pct": 0.0
+      "max": 101,
+      "amplitude_pct": 1.0
     },
     "throttled_ms": {
-      "mediana": 6329.6,
-      "min": 6165.2,
-      "max": 6541.5,
-      "amplitude_pct": 5.95
+      "mediana": 6363.3,
+      "min": 6100.9,
+      "max": 6629.3,
+      "amplitude_pct": 8.3
     },
     "nr_periods": {
       "mediana": 106,
-      "min": 106,
-      "max": 106,
-      "amplitude_pct": 0.0
+      "min": 105,
+      "max": 107,
+      "amplitude_pct": 1.89
     },
     "pct_periodos_throttlados": {
-      "mediana": 94.3,
-      "min": 94.3,
-      "max": 94.3,
-      "amplitude_pct": 0.0
+      "mediana": 95.2,
+      "min": 93.5,
+      "max": 96.2,
+      "amplitude_pct": 2.84
     }
   },
   "cgroup_nginx": {
     "cpu_usado_s": {
-      "mediana": 1.42,
-      "min": 1.42,
-      "max": 1.45,
-      "amplitude_pct": 2.33
+      "mediana": 1.43,
+      "min": 1.4,
+      "max": 1.44,
+      "amplitude_pct": 3.08
     },
     "cpu_us_por_request": {
-      "mediana": 54.4,
-      "min": 53.6,
-      "max": 55.1,
-      "amplitude_pct": 2.76
+      "mediana": 54.8,
+      "min": 53.1,
+      "max": 56.4,
+      "amplitude_pct": 6.02
     },
     "nr_throttled": {
-      "mediana": 7,
+      "mediana": 8,
       "min": 4,
       "max": 9,
-      "amplitude_pct": 71.43
+      "amplitude_pct": 62.5
     },
     "throttled_ms": {
-      "mediana": 99.9,
-      "min": 9.7,
-      "max": 135.8,
-      "amplitude_pct": 126.23
+      "mediana": 156.9,
+      "min": 15.7,
+      "max": 218.5,
+      "amplitude_pct": 129.25
     },
     "nr_periods": {
       "mediana": 108,
@@ -113,47 +113,47 @@
       "amplitude_pct": 1.85
     },
     "pct_periodos_throttlados": {
-      "mediana": 6.5,
+      "mediana": 7.4,
       "min": 3.7,
-      "max": 8.3,
-      "amplitude_pct": 70.77
+      "max": 8.4,
+      "amplitude_pct": 63.51
     }
   },
   "cgroup_db": {
     "cpu_usado_s": {
-      "mediana": 3.08,
-      "min": 3.06,
-      "max": 3.91,
-      "amplitude_pct": 27.49
+      "mediana": 3.06,
+      "min": 3.04,
+      "max": 3.8,
+      "amplitude_pct": 24.73
     },
     "cpu_us_por_request": {
-      "mediana": 118.4,
-      "min": 114.1,
-      "max": 151.8,
-      "amplitude_pct": 31.84
+      "mediana": 120.7,
+      "min": 116.6,
+      "max": 144.1,
+      "amplitude_pct": 22.78
     },
     "nr_throttled": {
       "mediana": 0,
       "min": 0,
-      "max": 3,
+      "max": 1,
       "amplitude_pct": 0.0
     },
     "throttled_ms": {
       "mediana": 0.0,
       "min": 0.0,
-      "max": 326.3,
+      "max": 14.1,
       "amplitude_pct": 0.0
     },
     "nr_periods": {
       "mediana": 106,
-      "min": 105,
-      "max": 109,
-      "amplitude_pct": 3.77
+      "min": 106,
+      "max": 107,
+      "amplitude_pct": 0.94
     },
     "pct_periodos_throttlados": {
       "mediana": 0.0,
       "min": 0.0,
-      "max": 2.8,
+      "max": 0.9,
       "amplitude_pct": 0.0
     }
   }
