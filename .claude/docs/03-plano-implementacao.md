@@ -92,16 +92,22 @@ Slug da variante para efeito de resultados: `<projeto>-<override>` →
 | **A1** ORM + `select_for_update` | **não feito** — fomos direto ao SQL cru | — |
 | **A2** `UPDATE ... RETURNING` | feito, é a implementação do projeto | `crebitos/models.py` |
 | **A3** Configuração tunada | feito | [04](./performance/django/04-postgres.md), [05](./performance/django/05-stack-completa-gatling.md) |
-| **B** Estratégias de concorrência | **não feito** — só B2 existe, nunca comparado | — |
+| **B** Estratégias de concorrência | **feito** em 2026-08-25, no projeto Go | [go/05](./performance/go/05-bloco-b-estrategias-de-concorrencia.md) |
 | **C1/C2** Postgres vs. SQLite | feito | [04](./performance/django/04-postgres.md) |
 | **C3/C4** MySQL, Mongo | não feito | — |
 | **D** Frameworks e runtimes | **não feito** — só previsões registradas | [06, seção 8](./performance/django/06-tipos-de-worker.md) |
 | **E** Infraestrutura | feito em parte: nginx, socket Unix, distribuição de cota | [03](./performance/django/03-nginx-e-socket-unix.md), [05](./performance/django/05-stack-completa-gatling.md) |
 
-**A maior lacuna é o Bloco B.** A implementação usa o `UPDATE` atômico
-condicional e ele entregou zero inconsistências em 553.527 requisições — mas
-**nunca foi comparado** com `SELECT FOR UPDATE`. A hipótese de que vence "por
-larga margem" continua sendo hipótese.
+**O Bloco B era a maior lacuna, e foi fechado em 2026-08-25** —
+[go/05](./performance/go/05-bloco-b-estrategias-de-concorrencia.md). As quatro
+estratégias foram implementadas no projeto Go (a stack mais barata, onde o custo
+da estratégia aparece limpo), testadas contra as mesmas asserções de
+concorrência e medidas sob contenção máxima.
+
+**A hipótese estava certa na direção e errada no tamanho**: o `UPDATE` atômico
+vence, mas por **9% a 15%** sobre `SELECT FOR UPDATE` e advisory lock — não "por
+larga margem". A margem larga (3,57x) existe só contra a estratégia otimista, e
+no pior caso possível para ela.
 
 Duas coisas do plano que a prática mostrou estarem erradas:
 
