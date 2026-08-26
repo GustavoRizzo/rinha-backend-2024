@@ -39,7 +39,7 @@ diferentes.
 
 | | |
 | - | - |
-| commit | `08d1e2a` |
+| commit | `592feea` (variantes) |
 | Django / psycopg | 6.1 / **3.3.4** |
 | rig | `django/compose.bench-postgres.yml`, API 0.40 CPU, banco 0.60 |
 | instrumento novo | `django/compose.bench-diag.yml` |
