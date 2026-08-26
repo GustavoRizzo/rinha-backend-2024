@@ -6,7 +6,7 @@ FastAPI não é continuação do 06 do Django, é o primeiro de outra linha.
 
 | Projeto | Experimentos | Estado |
 | - | - | - |
-| [django/](./django/00-indice.md) | 01 a 06 | **concluídos** — USD 100.000, zero inconsistências |
+| [django/](./django/00-indice.md) | 01 a 07 | **concluídos** — USD 100.000, zero inconsistências |
 | [fastapi/](./fastapi/00-indice.md) | 01 a 03 | **concluídos** — 1,73x na escrita, 4,00x na leitura |
 | [elixir/](./elixir/00-indice.md) | 01 a 04 | **em andamento** — o **mais barato dos três** depois que o 04 derrubou um erro meu |
 | [go/](./go/00-indice.md) | 01 a 04 | **concluídos** — a **mais barata das quatro** sob cota e a **mais rápida** sem cota; p98 de 4ms na prova oficial |

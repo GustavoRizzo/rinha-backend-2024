@@ -17,7 +17,7 @@ de recursos.
 
 ## Estado atual
 
-**Quatro implementações, dezesseis experimentos, as quatro passando na prova
+**Quatro implementações, dezessete experimentos, as quatro passando na prova
 oficial com pontuação máxima e zero inconsistências.**
 
 - [x] Documentação base (docs 01 a 05) e diário de aprendizados

@@ -14,3 +14,4 @@ Cada experimento tem arquivo próprio. A convenção de escrita está descrita e
 | [04](./04-postgres.md) | Postgres: leitura, escrita e o custo de `CONN_MAX_AGE` | 2026-08-21 | **concluído** |
 | [05](./05-stack-completa-gatling.md) | Stack completa (2 instâncias) + Gatling: **USD 100.000, zero inconsistências** | 2026-08-21 | **concluído** |
 | [06](./06-tipos-de-worker.md) | Tipos de worker: `sync`, `gthread`, ASGI/uvicorn | 2026-08-22 | **concluído** |
+| [07](./07-o-django-tambem-nao-reusava.md) | O Django também não reusava statements — **e não fez diferença**, porque o gargalo dele é a API | 2026-08-25 | **concluído** |
