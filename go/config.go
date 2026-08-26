@@ -41,6 +41,12 @@ type Config struct {
 	// talvez apareça.
 	Serializacao string
 
+	// As quatro estratégias de concorrência do Bloco B do plano
+	// (`.claude/docs/03-plano-implementacao.md`). `update-returning` é a que as
+	// quatro stacks usam e a única que já tinha número — de correção, não de
+	// custo. Ver `concorrencia.go` e `performance/go/05`.
+	Estrategia string
+
 	// Aborta a subida se a carga inicial divergir do README.
 	VerificarClientes bool
 
@@ -91,6 +97,11 @@ func carregarConfig() (Config, error) {
 		return cfg, erro
 	}
 	cfg.Serializacao, erro = opcao("SERIALIZACAO", "manual", []string{"manual", "stdlib"})
+	if erro != nil {
+		return cfg, erro
+	}
+	cfg.Estrategia, erro = opcao("ESTRATEGIA", "update-returning",
+		[]string{"update-returning", "select-for-update", "advisory-lock", "otimista"})
 	if erro != nil {
 		return cfg, erro
 	}

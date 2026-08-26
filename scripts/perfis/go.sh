@@ -54,6 +54,9 @@ perfil_sufixo_servidor() {
     sufixo="${sufixo}-p${GOMAXPROCS:-auto}"
     sufixo="${sufixo}-q${EXTRATO_QUERY:-unica}"
     [[ "${SERIALIZACAO:-manual}" != "manual" ]] && sufixo="${sufixo}-${SERIALIZACAO}"
+    # A estratégia de concorrência entra no slug quando não é a herdada das
+    # quatro stacks. Sem isso, as quatro linhas do Bloco B teriam o mesmo nome.
+    [[ "${ESTRATEGIA:-update-returning}" != "update-returning" ]] && sufixo="${sufixo}-${ESTRATEGIA}"
     [[ -n "${GOMEMLIMIT:-}" ]] && sufixo="${sufixo}-mem${GOMEMLIMIT}"
     [[ -n "${DB_POOL_MAX:-}" && "${DB_POOL_MAX}" != "8" ]] && sufixo="${sufixo}-pool${DB_POOL_MAX}"
     printf '%s' "$sufixo"

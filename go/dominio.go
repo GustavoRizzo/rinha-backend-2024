@@ -216,14 +216,21 @@ type linhaTransacao struct {
 //
 // A validação do payload acontece antes, no roteador: payload inválido não
 // merece nem uma conexão do pool, quanto mais um round-trip.
+// aplicarTransacao devolve `(limite, saldo)` já atualizados.
+//
+// A validação do payload acontece antes, no roteador: payload inválido não
+// merece nem uma conexão do pool, quanto mais um round-trip.
+//
+// Despacha para a estratégia escolhida por `ESTRATEGIA` — as quatro do Bloco B
+// do plano, implementadas em `concorrencia.go` e comparadas em
+// `performance/go/05`. Todas produzem o mesmo resultado observável; o que muda
+// é como o banco serializa os acessos concorrentes à mesma linha.
 func aplicarTransacao(
-	ctx context.Context, pool *pgxpool.Pool, idCliente int32, t transacaoValidada,
+	ctx context.Context, pool *pgxpool.Pool, cfg Config, idCliente int32, t transacaoValidada,
 ) (limite int32, saldo int32, erro error) {
 	delta := t.Valor
-	sql := sqlCredito
 	if t.Tipo == "d" {
 		delta = -t.Valor
-		sql = sqlDebito
 	}
 	agora := time.Now().UTC()
 
@@ -232,6 +239,12 @@ func aplicarTransacao(
 		return 0, 0, erro
 	}
 	defer conexao.Release()
+
+	// A otimista gerencia a própria transação: ela precisa ler FORA dela e
+	// repetir o ciclo inteiro quando o CAS falha.
+	if cfg.Estrategia == "otimista" {
+		return transacaoOtimista(ctx, conexao, idCliente, t, delta, agora)
+	}
 
 	// A transação garante que não exista `UPDATE` confirmado sem o `INSERT`
 	// correspondente — seria um saldo sem lastro no extrato, e o Gatling compara
@@ -244,13 +257,13 @@ func aplicarTransacao(
 	// para os caminhos de erro, inclusive o `return` de limite estourado.
 	defer tx.Rollback(ctx) //nolint:errcheck
 
-	erro = tx.QueryRow(ctx, sql, delta, idCliente).Scan(&saldo, &limite)
-	if errors.Is(erro, pgx.ErrNoRows) {
-		// Zero linhas afetadas é ambíguo: cliente inexistente ou limite
-		// estourado. Aqui, como nas outras stacks, não gastamos uma segunda
-		// query para desambiguar — o roteador já barrou os IDs inválidos com
-		// `clienteExiste` antes de tocar no banco.
-		return 0, 0, erroTransacaoInvalida
+	switch cfg.Estrategia {
+	case "update-returning":
+		limite, saldo, erro = transacaoUpdateRetornando(ctx, tx, idCliente, t, delta)
+	case "select-for-update":
+		limite, saldo, erro = transacaoSelectForUpdate(ctx, tx, idCliente, t, delta)
+	case "advisory-lock":
+		limite, saldo, erro = transacaoAdvisoryLock(ctx, tx, idCliente, t, delta)
 	}
 	if erro != nil {
 		return 0, 0, erro

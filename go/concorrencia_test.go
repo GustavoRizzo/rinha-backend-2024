@@ -42,6 +42,25 @@ func dispararEmParalelo(n int, requisicao func(i int) int) []int {
 	return status
 }
 
+// estrategias são as quatro do Bloco B. Os testes de concorrência rodam contra
+// TODAS: é isso que autoriza compará-las depois. Uma estratégia que perde uma
+// escrita é mais rápida por não fazer o trabalho, e o número dela seria
+// mentira.
+var estrategias = []string{"update-returning", "select-for-update", "advisory-lock", "otimista"}
+
+// porEstrategia roda o mesmo corpo de teste contra cada estratégia, com o banco
+// zerado antes de cada uma.
+func porEstrategia(t *testing.T, corpo func(*testing.T, http.Handler)) {
+	t.Helper()
+	for _, estrategia := range estrategias {
+		t.Run(estrategia, func(t *testing.T) {
+			zerar(t)
+			h := servidorDe(t, func(c *Config) { c.Estrategia = estrategia })
+			corpo(t, h)
+		})
+	}
+}
+
 func TestVinteECincoDebitosSimultaneos(t *testing.T) {
 	h := caso(t)
 
@@ -150,4 +169,76 @@ func TestTodaTransacaoConfirmadaTemLastroNoExtrato(t *testing.T) {
 	if soma != int64(saldoDe(t, 4)) {
 		t.Errorf("soma das transações %d != saldo %d", soma, saldoDe(t, 4))
 	}
+}
+
+// --------------------------------------------------------------------------
+// As mesmas garantias, contra as QUATRO estratégias do Bloco B
+// --------------------------------------------------------------------------
+
+func TestTodasAsEstrategiasNaoPerdemEscrita(t *testing.T) {
+	// 25 débitos simultâneos -> saldo exatamente -25. É a fase 1 do Gatling, e
+	// o teste que separa atômico de "quase atômico".
+	porEstrategia(t, func(t *testing.T, h http.Handler) {
+		status := dispararEmParalelo(25, func(int) int {
+			return transacionar(h, 1, `{"valor":1,"tipo":"d","descricao":"d"}`).Code
+		})
+		for _, s := range status {
+			if s != http.StatusOK {
+				t.Fatalf("status %d, esperado 200 em todos", s)
+			}
+		}
+		if saldo := saldoDe(t, 1); saldo != -25 {
+			t.Errorf("saldo %d, esperado exatamente -25", saldo)
+		}
+	})
+}
+
+func TestTodasAsEstrategiasRespeitamOLimite(t *testing.T) {
+	// O caso adversarial: 100 débitos de 1.000 contra um limite de 80.000.
+	// Exatamente 80 passam, 20 são recusados, e o saldo para no limite.
+	porEstrategia(t, func(t *testing.T, h http.Handler) {
+		status := dispararEmParalelo(100, func(int) int {
+			return transacionar(h, 2, `{"valor":1000,"tipo":"d","descricao":"d"}`).Code
+		})
+		var aceitos, recusados int
+		for _, s := range status {
+			switch s {
+			case http.StatusOK:
+				aceitos++
+			case http.StatusUnprocessableEntity:
+				recusados++
+			default:
+				t.Fatalf("status inesperado: %d", s)
+			}
+		}
+		if aceitos != 80 || recusados != 20 {
+			t.Errorf("%d aceitos e %d recusados, esperado 80 e 20", aceitos, recusados)
+		}
+		if saldo := saldoDe(t, 2); saldo != -80_000 {
+			t.Errorf("saldo %d, esperado exatamente -80000", saldo)
+		}
+	})
+}
+
+func TestTodasAsEstrategiasDaoLastroNoExtrato(t *testing.T) {
+	// Toda transação confirmada tem de ter INSERT correspondente: o Gatling
+	// compara saldo e extrato.
+	porEstrategia(t, func(t *testing.T, h http.Handler) {
+		dispararEmParalelo(40, func(int) int {
+			return transacionar(h, 4, `{"valor":10,"tipo":"c","descricao":"l"}`).Code
+		})
+		var quantidade, soma int64
+		erro := poolTeste.QueryRow(context.Background(),
+			"SELECT count(*), COALESCE(sum(valor), 0) FROM crebitos_transacao WHERE cliente_id = 4").
+			Scan(&quantidade, &soma)
+		if erro != nil {
+			t.Fatal(erro)
+		}
+		if quantidade != 40 {
+			t.Errorf("%d transações gravadas, esperado 40", quantidade)
+		}
+		if soma != int64(saldoDe(t, 4)) {
+			t.Errorf("soma das transações %d != saldo %d", soma, saldoDe(t, 4))
+		}
+	})
 }

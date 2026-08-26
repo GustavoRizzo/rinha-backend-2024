@@ -48,6 +48,8 @@ services:
       - GOMAXPROCS=${GOMAXPROCS:-auto}
       - EXTRATO_QUERY=${EXTRATO_QUERY:-unica}
       - SERIALIZACAO=${SERIALIZACAO:-manual}
+      # Bloco B do plano: ver `concorrencia.go` e `performance/go/05`.
+      - ESTRATEGIA=${ESTRATEGIA:-update-returning}
       - GOMEMLIMIT=${GOMEMLIMIT:-}
       - DB_POOL_MAX=${DB_POOL_MAX:-8}
       # O rig replanta o histórico entre as repetições, então os saldos não

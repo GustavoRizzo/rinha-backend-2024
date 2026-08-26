@@ -66,7 +66,7 @@ func (s *servidor) transacoes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	limite, saldo, erro := aplicarTransacao(r.Context(), s.pool, idCliente, t)
+	limite, saldo, erro := aplicarTransacao(r.Context(), s.pool, s.cfg, idCliente, t)
 	if erro != nil {
 		if errors.Is(erro, erroTransacaoInvalida) {
 			w.WriteHeader(http.StatusUnprocessableEntity)
