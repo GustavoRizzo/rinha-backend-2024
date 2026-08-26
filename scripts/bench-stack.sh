@@ -156,10 +156,40 @@ prefixo_projeto=""
 [[ "$PROJETO" != "django" ]] && prefixo_projeto="${PROJETO}-"
 config="${prefixo_projeto}${rig}-${sufixo_servidor}-${ENDPOINT}-cpu${cpus}-w${workers}"
 [[ -n "$rps" ]] && config="${config}-${rps}rps"
+# A COTA DOS OUTROS SERVIÇOS também identifica a série, e faltava. `cpu${cpus}`
+# só descreve a API: duas séries com o banco em 0.6 e em 2.0 CPU tinham o mesmo
+# nome, e a segunda apagava a primeira. Aconteceu em `performance/go/01`, cuja
+# ressalva 2 registra a perda.
+#
+# Só entram quando diferem do padrão do rig, para não renomear nenhuma série já
+# publicada.
+[[ -n "${DB_CPUS:-}" && "${DB_CPUS}" != "0.6" && "${DB_CPUS}" != "0.60" ]] \
+    && config="${config}-db${DB_CPUS}"
+[[ -n "${LB_CPUS:-}" && "${LB_CPUS}" != "0.15" ]] && config="${config}-lb${LB_CPUS}"
 # BENCH_TAG separa séries de experimentos diferentes que compartilham a mesma
 # configuração. Sem ele, repetir uma configuração com instrumentação nova
 # sobrescreve — em silêncio — o arquivo que sustenta um documento já escrito.
 [[ -n "${BENCH_TAG:-}" ]] && config="${config}-${BENCH_TAG}"
+
+# ARQUIVAR ANTES DE SOBRESCREVER.
+#
+# Re-rodar uma configuração é legítimo e frequente — mas o JSON antigo é o que
+# sustenta os números de um documento já escrito, e perdê-lo transforma o
+# documento em afirmação sem lastro. Aconteceu duas vezes: em
+# `performance/elixir/04` (ressalva 1) e em `performance/go/01` (ressalva 2).
+#
+# A série anterior vira `<slug>.<commit>.serie.json` e fica ao lado. O arquivo
+# canônico continua com o mesmo nome, então nenhum documento publicado quebra.
+serie_existente="$RAIZ/resultados/bench/${config}-${ENDPOINT}.serie.json"
+if [[ -f "$serie_existente" ]]; then
+    commit_antigo=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('git_commit','sem-commit')[:7])" \
+        "$serie_existente" 2>/dev/null || echo sem-commit)
+    arquivo="$RAIZ/resultados/bench/${config}-${ENDPOINT}.${commit_antigo}.serie.json"
+    if [[ ! -f "$arquivo" ]]; then
+        cp "$serie_existente" "$arquivo"
+        echo "[$config] série anterior (${commit_antigo}) arquivada em $(basename "$arquivo")" >&2
+    fi
+fi
 
 # Antes do aquecimento, e para QUALQUER endpoint: o extrato precisa de
 # histórico para não medir a serialização de uma lista vazia, e o rig da stack

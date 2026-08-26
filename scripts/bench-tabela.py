@@ -55,6 +55,11 @@ def main() -> None:
     cab = (
         f"{'config':{largura}}{'endpoint':11}{'rps':>9}{'ampl%':>7}"
         f"{'µs/req':>9}{'thr%':>6}{'µs/req db':>11}{'thr% db':>9}{'p99ms':>8}"
+        # O commit vai em CADA LINHA, e não só no rodapé: a ação decorrente de
+        # `performance/elixir/04` pedia que a mistura de commits ficasse
+        # "mais visível que hoje", e um aviso no fim da tabela é justamente o
+        # que se lê por último — ou não se lê.
+        f"{'commit':>9}"
     )
     print(cab)
     print("-" * len(cab))
@@ -67,6 +72,7 @@ def main() -> None:
             f"{celula(d, 'cgroup_db', 'cpu_us_por_request'):>11}"
             f"{celula(d, 'cgroup_db', 'pct_periodos_throttlados'):>9}"
             f"{d['p99_ms']['mediana']:8.1f}"
+            f"{d['git_commit'][:7]:>9}"
         )
 
     commits = {d["git_commit"] for d in dados}
@@ -78,8 +84,8 @@ def main() -> None:
     )
     if len(commits) > 1:
         print(
-            "AVISO: séries de commits diferentes na mesma tabela. Comparável só se"
-            " nada entre elas tocou o caminho medido."
+            f"AVISO: {len(commits)} commits diferentes nesta tabela (coluna à"
+            " direita). Comparável só se nada entre eles tocou o caminho medido."
         )
     if sujas:
         print(f"AVISO: séries medidas com ÁRVORE SUJA: {', '.join(sujas)}")
