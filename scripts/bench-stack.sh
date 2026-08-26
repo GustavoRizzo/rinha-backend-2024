@@ -180,11 +180,16 @@ config="${prefixo_projeto}${rig}-${sufixo_servidor}-${ENDPOINT}-cpu${cpus}-w${wo
 #
 # A série anterior vira `<slug>.<commit>.serie.json` e fica ao lado. O arquivo
 # canônico continua com o mesmo nome, então nenhum documento publicado quebra.
-serie_existente="$RAIZ/resultados/bench/${config}-${ENDPOINT}.serie.json"
+# O nome do arquivo é `${config}.serie.json` — o endpoint JÁ está dentro de
+# `$config`. A primeira versão deste bloco procurava
+# `${config}-${ENDPOINT}.serie.json`, não achava nada e não arquivava nada, em
+# silêncio: o guarda contra perda de dados tinha o mesmo defeito que ele existe
+# para evitar. Conferido re-rodando uma série e vendo o arquivo aparecer.
+serie_existente="$RAIZ/resultados/bench/${config}.serie.json"
 if [[ -f "$serie_existente" ]]; then
     commit_antigo=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('git_commit','sem-commit')[:7])" \
         "$serie_existente" 2>/dev/null || echo sem-commit)
-    arquivo="$RAIZ/resultados/bench/${config}-${ENDPOINT}.${commit_antigo}.serie.json"
+    arquivo="$RAIZ/resultados/bench/${config}.${commit_antigo}.serie.json"
     if [[ ! -f "$arquivo" ]]; then
         cp "$serie_existente" "$arquivo"
         echo "[$config] série anterior (${commit_antigo}) arquivada em $(basename "$arquivo")" >&2
