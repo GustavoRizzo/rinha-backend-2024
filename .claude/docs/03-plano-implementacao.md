@@ -95,7 +95,11 @@ Slug da variante para efeito de resultados: `<projeto>-<override>` →
 | **B** Estratégias de concorrência | **feito** em 2026-08-25, no projeto Go | [go/05](./performance/go/05-bloco-b-estrategias-de-concorrencia.md) |
 | **C1/C2** Postgres vs. SQLite | feito | [04](./performance/django/04-postgres.md) |
 | **C3/C4** MySQL, Mongo | não feito | — |
-| **D** Frameworks e runtimes | **não feito** — só previsões registradas | [06, seção 8](./performance/django/06-tipos-de-worker.md) |
+| **D1** FastAPI | feito | [fastapi/01](./performance/fastapi/01-fastapi-async.md) a [03](./performance/fastapi/03-o-que-a-troca-de-framework-comprou.md) |
+| **D2** Django async | **não feito** — medido só como tipo de worker | [django/06](./performance/django/06-tipos-de-worker.md) |
+| **D3** Go + pgx | feito, e é a stack mais barata das quatro | [go/01](./performance/go/01-a-aplicacao-sai-da-frente.md) a [05](./performance/go/05-bloco-b-estrategias-de-concorrencia.md) |
+| **D4/D5** Rust, Node | não feitos — e o Go já responde "compilado sem VM" | — |
+| **Elixir** (fora do plano original) | feito | [elixir/01](./performance/elixir/01-a-beam-sob-cota.md) a [04](./performance/elixir/04-o-statement-que-nao-era-reusado.md) |
 | **E** Infraestrutura | feito em parte: nginx, socket Unix, distribuição de cota | [03](./performance/django/03-nginx-e-socket-unix.md), [05](./performance/django/05-stack-completa-gatling.md) |
 
 **O Bloco B era a maior lacuna, e foi fechado em 2026-08-25** —

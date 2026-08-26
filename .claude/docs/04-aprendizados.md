@@ -299,6 +299,97 @@ porque `nr_throttled` estava sendo medido por serviço.
 
 ---
 
+### [2026-08-25] O valor de uma correção é a escassez do recurso que ela libera
+**Contexto**: o mesmo defeito — statements replanejados a cada requisição —
+existia no Elixir e no Django, com a mesma assinatura (`plans = calls`).
+
+**Observado**:
+
+| | Elixir | Django |
+| - | - | - |
+| % do tempo de banco planejando | 62,2% | 44–54% |
+| quem estava congelado | **o banco** (94,4%) | **a API** (94–96%) |
+| ganho ao corrigir | **2,02x** | **1,01x** |
+
+**Conclusão**: o tamanho do desperdício não prevê o tamanho do ganho. O que
+prevê é **de quem era o recurso desperdiçado**. Devolver 62% do trabalho de um
+banco saturado vira vazão; devolver 48% do trabalho de um banco ocioso não vira
+nada.
+
+**Ação**: registrado em `performance/django/07`. E vale como pergunta a fazer
+antes de qualquer otimização: *o recurso que eu vou liberar está escasso?*
+
+---
+
+### [2026-08-25] A bancada elege, a prova oficial decide — pela segunda vez
+**Contexto**: `GOMAXPROCS=1` no Go. Sob cota, custa 20% menos CPU por requisição
+que o padrão `auto`, e derruba a amplitude entre repetições de 25% para 1,7%.
+
+**Observado**: na prova oficial, cinco execuções de cada braço.
+
+| | abaixo de 250ms | p98 por execução |
+| - | - | - |
+| `auto` | 100% nas cinco | 4, 4, 4, 5, 4 ms |
+| `1` | 99,61% numa delas | 4, 5, 5, **37**, **68** ms |
+
+**Conclusão**: é o mesmo mecanismo de `performance/fastapi/02`, seção 5.4, com
+outro botão. Sob 340 req/s **nada satura** — a stack usa ~13% do orçamento — e
+aí a segunda thread deixa de ser desperdício e vira o que absorve as rajadas do
+modelo aberto.
+
+**Ação**: padrão fica `auto`. E a regra derivada de lá ganha uma segunda
+confirmação: *otimização medida em saturação não se transfere para a carga real;
+se o sistema não satura no uso previsto, a folga não é desperdício, é o
+amortecedor da cauda.*
+
+---
+
+### [2026-08-25] Bloco B: o `UPDATE` atômico vence, mas não "por larga margem"
+**Contexto**: a maior lacuna do plano, aberta antes da primeira linha de código.
+
+**Observado**, sob contenção máxima (50 requisições concorrentes na mesma linha):
+
+| estratégia | rps | vs. B2 | quem congela |
+| - | - | - | - |
+| `update-returning` | 1256,5 | — | **o banco** (93,5%) |
+| `select-for-update` | 1137,5 | 0,91x | a API (93,4%) |
+| `advisory-lock` | 1072,7 | 0,85x | a API (94,3%) |
+| `otimista` | 351,7 | 0,28x | os dois |
+
+**Conclusão**: 9% a 15% sobre os locks pessimistas, e não a "larga margem" que a
+hipótese previa. O ganho é **aritmética de round-trips** — B2 economiza um
+contra B1 e dois contra B3 — não mágica.
+
+E o detalhe contraintuitivo: **B2 é a única com o banco saturado, e ganha
+assim**. As duas com lock explícito deixam o Postgres quase ocioso e perdem,
+porque a aplicação passa o tempo **esperando** o lock — e esperar não aparece
+como CPU em lugar nenhum.
+
+**Ação**: `performance/go/05`. A estratégia do projeto não muda; passa a ser
+escolha medida em vez de hipótese.
+
+---
+
+### [2026-08-25] O guarda contra falha silenciosa tinha uma falha silenciosa
+**Contexto**: duas séries de bancada já haviam sido perdidas por sobrescrita
+(`elixir/04` e `go/01`). A correção foi arquivar a série anterior antes de
+gravar a nova.
+
+**Observado**: o bloco de arquivamento procurava
+`${config}-${ENDPOINT}.serie.json`. O nome real é `${config}.serie.json` — o
+endpoint já está dentro de `$config`. Ele não achava nada e **não arquivava
+nada, sem imprimir uma linha sequer**. Custou mais uma série antes de eu
+perceber.
+
+**Conclusão**: escrever o guarda não é o mesmo que ter o guarda. O que faltou
+foi o passo de **verificar que ele dispara** — re-rodar uma série e ver o
+arquivo aparecer, que é o que fez o bug cair em dez segundos depois.
+
+**Ação**: corrigido e verificado. Nas 24 séries seguintes, 23 arquivamentos
+dispararam.
+
+---
+
 ### [2026-08-25] O mesmo zero significa o oposto em dois drivers de Postgres
 **Contexto**: porte da configuração de pool do FastAPI para o Go. O asyncpg
 recebe `max_inactive_connection_lifetime=0`, e ali zero quer dizer **nunca

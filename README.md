@@ -174,6 +174,7 @@ Material de apoio em [`.claude/docs/`](./.claude/docs/):
 | [03 — Plano](./.claude/docs/03-plano-implementacao.md) | Matriz de variantes e metodologia de diagnóstico |
 | [04 — Aprendizados](./.claude/docs/04-aprendizados.md) | Diário técnico, decisões e **erros cometidos** |
 | [05 — Hacks da competição](./.claude/docs/05-hacks-da-competicao.md) | Atalhos que só se justificam por ser um desafio |
+| [06 — A história do projeto](./.claude/docs/06-a-historia-do-projeto.md) | **Comece por aqui se quiser o percurso**: os quatro atos em ordem, com os erros |
 
 ## Como executar
 

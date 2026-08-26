@@ -64,35 +64,38 @@ oficial com pontuação máxima e zero inconsistências.**
       que custava 862 µs; a de agora custa 303 µs e o banco satura primeiro na
       leitura
 
-Resultado da configuração final em Django: **100% das requisições abaixo de
-250ms**, p98 de 7ms contra um SLA de 250ms, subida em ~20s contra um limite de
-40s. O FastAPI repete a pontuação com p98 de 5ms, e custa **1,73x menos CPU na
-escrita e 4,00x menos na leitura** — diferença que a pontuação, saturada, não
-enxerga. O Elixir repete a pontuação com p98 de 5ms e o **melhor máximo das
-três (51ms)**, e depois da correção do
-[`elixir/04`](./performance/elixir/04-o-statement-que-nao-era-reusado.md) é o
-mais barato por requisição: 462 µs na escrita e 158 µs na leitura.
+**As quatro marcam USD 100.000 e ficam 100% abaixo de 250ms.** O que as separa
+é o custo por requisição, que a pontuação saturada não enxerga — medido nas
+quatro no mesmo commit (`2b408eb`):
+
+| | Django | FastAPI | Elixir | Go |
+| - | - | - | - | - |
+| CPU/req, escrita | 856 µs | 512 µs | 444 µs | **323 µs** |
+| CPU/req, leitura | 1224 µs | 257 µs | 158 µs | **105 µs** |
+| p98 na prova oficial | 7 ms | 5 ms | 5 ms | **4 ms** |
+| linhas de código (app+framework) | **289** | 318 | 442 | 688 |
+
+O Go é o mais barato dos quatro e a **primeira stack em que a aplicação sai da
+frente**: sob a cota da competição, quem satura é o Postgres (93,5% de períodos
+congelados) enquanto a API fica em 0,9% na leitura.
 
 ### O que ficou em aberto
 
-- Comparar o `UPDATE` atômico contra `SELECT FOR UPDATE` (nunca medido)
 - Variante com as 10 últimas transações em `JSONB` (hack M5, não implementada)
 - `synchronous_commit` como variável medida, não como decisão
 - bridge vs. host no Docker: impossível no Docker Desktop
-- **Rodar `just diag-prepared django`**: o Django usa psycopg com SQL cru e
-  ninguém conferiu se ele reusa statements. Se não reusar, parte dos 862 µs da
-  escrita e dos 1258 µs da leitura é o mesmo problema do
-  [`elixir/04`](./performance/elixir/04-o-statement-que-nao-era-reusado.md)
-- **Medir o Go.** A implementação existe e passa nos 39 testes; nenhum número de
-  desempenho foi levantado. A previsão de
-  [`performance/django/06`](./performance/django/06-tipos-de-worker.md), seção 8
-  (50–100 µs/req) está registrada em
-  [`performance/go/00-indice.md`](./performance/go/00-indice.md), seção 6, junto
-  com as deste projeto
-- Redistribuir a cota entre API e banco agora que a API ficou mais barata — é o
-  teste que responde se o gargalo migrou para o Postgres
+- Redistribuir a cota entre API e banco no Go: a repartição atual foi calibrada
+  com uma API de 862 µs, e a de hoje custa 323 µs — o Postgres é que satura
 - Promover a query única do extrato a padrão do FastAPI (1,25x, já com testes
   provando bytes idênticos)
+- **Duas amplitudes altas sem explicação**: 51,3% na leitura do Elixir sem cota
+  (era 9,0% três dias antes, mesmo comando) e 31,4% na leitura do Go sob cota.
+  Pela regra do projeto, amplitude alta é mecanismo a encontrar
+- Medir a estratégia otimista com a carga **espalhada** entre os 5 clientes: a
+  bancada bate sempre no cliente 1, o pior caso possível para ela
+  ([`go/05`](./performance/go/05-bloco-b-estrategias-de-concorrencia.md))
+- Portar as quatro estratégias de concorrência para o FastAPI, para saber se os
+  fatores se mantêm quando a aplicação é 1,6x mais cara
 
 ## Referência rápida
 
