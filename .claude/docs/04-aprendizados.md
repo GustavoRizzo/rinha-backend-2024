@@ -104,6 +104,53 @@ arquivo atendido inteiramente dentro do kernel. Sem portas, sem TIME_WAIT, sem
 handshake de três vias. Elimina esta classe de problema por construção, e é o
 que deve ser usado quando o nginx entrar.
 
+### Quem gasta porta efêmera, e por que os dois saltos não têm o mesmo problema
+
+Esta parte faltava no registro original, e é o que responde à pergunta óbvia:
+*se o socket Unix só protege o salto interno, o salto de fora não continua
+exposto?*
+
+**Porta efêmera é gasta por quem ABRE a conexão, não por quem a recebe.** O
+servidor tem uma porta só — a 9999 — e todas as conexões chegam nela; o que
+distingue uma da outra é a porta *do outro lado*, na quádrupla. Por isso um
+servidor não esgota portas por atender, por mais carga que receba.
+
+Quem esgotava, no experimento 02, era o **gerador de carga**. Está no número
+registrado acima: o `TIME_WAIT` que subiu de 5.081 para 6.269 era do **host**,
+onde o `oha` rodava. A aplicação forçava o fechamento a cada resposta, e o
+cliente precisava de uma porta nova a cada requisição.
+
+Daí a assimetria das duas correções:
+
+| salto | quem abre conexão | o que protege | mecanismo |
+| - | - | - | - |
+| cliente → nginx | o cliente (Gatling, `oha`, navegador) | **keep-alive** | `keepalive_timeout 65` e `keepalive_requests 10000` no `nginx.conf`: cada conexão serve até 10.000 requisições, e as 61.503 do teste cabem em poucas centenas delas |
+| nginx → API | o nginx | **socket Unix** | não existe porta para gastar |
+
+O primeiro **administra** o problema: continua havendo portas, `TIME_WAIT` e
+handshake, só que raramente. O segundo **elimina** o problema, e por isso é mais
+forte — mas só é possível porque nginx e API estão na mesma máquina.
+
+### E a conclusão que importa: o problema não era do protocolo
+
+O HTTP/1.1 tem keep-alive desde 1997. O worker `sync` do Gunicorn simplesmente
+não o usava (`resp.force_close()`, `gunicorn/workers/sync.py:177`). **O
+protocolo oferecia a solução e a implementação recusava.**
+
+Trocar de versão de HTTP não teria resolvido nada ali — e a mesma armadilha
+existe do lado do nginx, num lugar que passa despercebido: o padrão do
+`proxy_pass` é falar **HTTP/1.0** com o upstream, que não tem keep-alive. É por
+isso que `infra/nginx/nginx-rinha.conf` traz as duas linhas
+
+```nginx
+proxy_http_version 1.1;
+proxy_set_header Connection "";
+```
+
+Elas não são decoração: sem elas, o nginx recriaria a conexão com a API a cada
+requisição — reintroduzindo, do lado de dentro, exatamente o comportamento que
+derrubou a stack no experimento 02.
+
 ---
 
 ### [2026-08-21] Ferramentas de teste de carga: duas, com papéis diferentes
@@ -218,6 +265,76 @@ comparar com o ranking oficial. Toda pontuação registrada deve deixar isso cla
 ---
 
 ## Conceitos
+
+### [2026-08-25] Versões do HTTP: o que cada uma compra, e o que custa aqui
+**Contexto**: a pergunta natural ao ver `http/1.1` no DevTools — *não faria
+sentido usar algo mais moderno?* Ela tem duas metades: quem decide o protocolo,
+e se a troca valeria a pena.
+
+**Quem decide**: ninguém sozinho. O cliente propõe, o servidor aceita. O que o
+`nginx.conf` faz é **oferecer** opções — e a nossa oferta é só HTTP/1.1, porque
+`listen 9999` não tem `ssl` nem `http2`.
+
+O detalhe que fecha a questão do navegador: **navegadores só falam HTTP/2 sobre
+TLS**. A negociação acontece no ALPN, uma extensão do handshake TLS — sem TLS,
+não há onde negociar. Existe HTTP/2 em texto claro (h2c) e o nginx o suporta,
+mas nenhum navegador o implementa, de propósito.
+
+**O que cada versão compra**:
+
+| versão | transporte | ganho principal | custo |
+| - | - | - | - |
+| HTTP/1.0 | TCP | — | sem keep-alive: uma conexão por requisição |
+| **HTTP/1.1** | TCP | keep-alive, pipelining | head-of-line blocking por conexão |
+| HTTP/2 | TCP | multiplexação numa conexão, HPACK nos cabeçalhos | camada de frames e estado de HPACK = mais CPU por requisição; head-of-line blocking **desce para o TCP** |
+| HTTP/3 | QUIC/UDP | multiplexação sem HOL blocking, handshake mais curto | pilha nova, mais CPU ainda, e sem `TIME_WAIT` porque não há TCP |
+
+**Onde o ganho do HTTP/2 aparece de verdade**: muitas requisições pequenas por
+conexão, com cabeçalhos grandes e repetidos — uma página com dezenas de assets.
+**O que este workload tem**: duas rotas, corpos de 50 a 400 bytes, cabeçalhos
+mínimos e keep-alive já ativo nos dois saltos. O problema que o HTTP/2 resolve
+já não existe aqui.
+
+**Medido** (exploratório — ver ressalva abaixo), leitura, sob a cota da
+competição, com o nginx em 0.15 CPU:
+
+| protocolo | rps | CPU do nginx | **nginx congelado** |
+| - | - | - | - |
+| HTTP/1.1 | **3121** | **42,7 µs** | 6,6–25,7% |
+| h2c | 2707 | 58,6 µs | **97–98%** |
+
+**+37% de CPU no nginx e −13% de vazão.** Na escrita, +24% de CPU e vazão
+praticamente igual (1213 contra 1208), porque ali quem manda é a API.
+
+E o braço de controle, com o nginx em 1.0 CPU para separar *custo* de
+*saturação*, rodado nas duas ordens: o custo extra do h2c cai para **+11% a
++14%**, e a diferença de vazão **desaparece dentro da amplitude**.
+
+**Conclusão**: o custo do HTTP/2 é real e consistente — ele sempre gasta mais
+CPU no nginx. O que varia é se isso importa: sob cota, empurrou o serviço
+proporcionalmente mais carregado da stack para 98% de saturação; sem cota, sumiu
+no ruído. **É a regra da escassez outra vez** — a mesma que explica por que
+statements replanejados custaram 2,02x ao Elixir e 1,01x ao Django.
+
+**Ressalva**: medição exploratória, feita fora do ferramental do projeto — rig
+numa porta separada, script de medição próprio, série **não arquivada** em
+`resultados/`. Vale como ordem de grandeza e como direção, não como número de
+documento. Para virar experimento, precisaria de `compose.h2c.yml` versionado,
+slug próprio e série arquivada.
+
+**Ação**: nada muda. O `listen 9999` continua sem `http2`, e por três motivos em
+ordem de peso: (1) a simulação oficial do Gatling fala HTTP/1.1 e é cópia bit a
+bit da original — trocar o protocolo mudaria o que está sendo medido e quebraria
+a comparação com as outras três stacks; (2) o h2c custa CPU justamente no
+serviço mais apertado; (3) para o navegador usar HTTP/2 seria preciso TLS, cujo
+handshake e cifragem sairiam do mesmo orçamento de 1,5 CPU.
+
+**Onde a escolha de protocolo seria interessante de verdade**: HTTP/3, que roda
+sobre QUIC e portanto **não tem `TIME_WAIT` nem portas presas** do jeito que o
+TCP tem. Isso ataca a raiz do achado das portas efêmeras em vez de administrá-lo
+— mas o cliente é quem escolhe, e o cliente aqui é fixo.
+
+---
 
 ### [2026-08-20] Open model é o que torna a Rinha difícil
 **Contexto**: entender por que "responder devagar" não é uma opção viável.
