@@ -33,23 +33,23 @@ from crebitos.views import _iso, _json, _vazio
 # custaria import de modelo sem comprar nada. É o mesmo texto que o
 # `_aplicar_delta` gera — `tests_async.py` compara os dois.
 _SQL_DEBITO = (
-    "UPDATE crebitos_cliente SET saldo = saldo + %s"
+    "UPDATE \"crebitos_cliente\" SET saldo = saldo + %s"
     " WHERE id = %s AND saldo + %s >= -limite"
     " RETURNING saldo, limite"
 )
 _SQL_CREDITO = (
-    "UPDATE crebitos_cliente SET saldo = saldo + %s"
+    "UPDATE \"crebitos_cliente\" SET saldo = saldo + %s"
     " WHERE id = %s"
     " RETURNING saldo, limite"
 )
 _SQL_INSERT = (
-    "INSERT INTO crebitos_transacao"
+    "INSERT INTO \"crebitos_transacao\""
     " (cliente_id, valor, tipo, descricao, realizada_em)"
     " VALUES (%s, %s, %s, %s, %s)"
 )
-_SQL_CLIENTE = "SELECT saldo, limite FROM crebitos_cliente WHERE id = %s"
+_SQL_CLIENTE = "SELECT saldo, limite FROM \"crebitos_cliente\" WHERE id = %s"
 _SQL_EXTRATO = (
-    "SELECT valor, tipo, descricao, realizada_em FROM crebitos_transacao"
+    "SELECT valor, tipo, descricao, realizada_em FROM \"crebitos_transacao\""
     f" WHERE cliente_id = %s ORDER BY id DESC LIMIT {QTD_TRANSACOES_EXTRATO}"
 )
 
