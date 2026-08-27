@@ -162,6 +162,13 @@ invólucro de thread pool sobre o driver síncrono.
 Ter Django/uvicorn medido separadamente tem um valor específico para o futuro:
 numa comparação Django vs. FastAPI, o servidor deixa de ser variável escondida.
 
+> **CONFERIDO em 2026-08-27, em [`08`](./08-django-async.md).** Com views
+> `async def` e `psycopg.AsyncConnectionPool`, o Django foi de 4160 para 2198
+> µs por escrita — **1,89x melhor que este braço, e ainda 2,51x pior que o
+> worker síncrono**. Ou seja: a leitura acima está certa (a camada extra era
+> real e custava metade), e a conclusão prática do experimento 06 não muda —
+> async não compra vazão onde não há espera para sobrepor.
+
 ---
 
 ## 6. A prova oficial: o Gatling confirma, mas quase não diferencia
@@ -436,8 +443,10 @@ nenhuma.
 - [x] `pontuacao.py` separa falhas de requisição de inconsistências de saldo,
       e aborta se houver KO sem tabela de erros legível.
 - [x] Relatórios das três variantes versionados em `resultados/django*/`.
-- [ ] Experimento futuro: FastAPI com views `async` e `asyncpg` — async de ponta
-      a ponta, que é o teste que este experimento não fez.
+- [x] Experimento futuro: async de ponta a ponta, que este experimento não fez.
+      Feito em duas frentes: [`fastapi/01`](../fastapi/01-fastapi-async.md)
+      (FastAPI + asyncpg) e [`08`](./08-django-async.md) (o **próprio Django**
+      com views `async def` e pool assíncrono do psycopg).
 
 ---
 

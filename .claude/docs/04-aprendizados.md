@@ -401,6 +401,7 @@ documento próprio em `performance/`.
 | Socket Unix entre nginx e API | 2,9x; amplitude de 246% para 3,9% | [03](./performance/django/03-nginx-e-socket-unix.md) |
 | Worker `sync` em vez de `gthread` | 2,4x | [06](./performance/django/06-tipos-de-worker.md) |
 | Worker `sync` em vez de ASGI/uvicorn | 4,7x | [06](./performance/django/06-tipos-de-worker.md) |
+| Worker `sync` em vez de Django `async` de ponta a ponta | 2,5x (escrita) / 1,5x (leitura) | [08](./performance/django/08-django-async.md) |
 | Cota de CPU nas APIs, não no banco | p98 de 217ms para 7ms | [05](./performance/django/05-stack-completa-gatling.md) |
 | 1 worker por API em vez de 4 | 28% (sob cota) | [04](./performance/django/04-postgres.md) |
 | `DEBUG=False` | 4,1% | [01](./performance/django/01-debug-vs-producao.md) |
@@ -413,6 +414,47 @@ requisição.
 **A mais barata de todas foi redistribuir**: mover 0,25 CPU de serviços ociosos
 para as APIs não custou nada e derrubou o p98 de 217ms para 7ms. Só foi possível
 porque `nr_throttled` estava sendo medido por serviço.
+
+---
+
+### [2026-08-27] Async não compra vazão onde não há espera para sobrepor
+**Contexto**: [`django/08`](./performance/django/08-django-async.md) fechou a
+lacuna que o experimento 06 deixou aberta — views `async def` com
+`psycopg.AsyncConnectionPool`, sem `sync_to_async` no caminho quente.
+
+**Hipótese registrada antes**: async perde do worker síncrono por 1,2x a 1,7x.
+**Medido**: perde por **2,51x** na escrita e 1,48x na leitura. Certo na direção,
+errado na magnitude — e certo só no endpoint de leitura.
+
+O mecanismo é o que interessa. **Async compra sobreposição de espera.** Nesta
+stack não existe espera para sobrepor: o Postgres é local e responde em
+centenas de microssegundos, `synchronous_commit = off` tirou o disco do caminho
+crítico, e a cota de 0.40 CPU garante que o gargalo é CPU de Python. Pagar o
+mecanismo e não ter o que sobrepor é custo puro.
+
+Três desdobramentos que valem além deste experimento:
+
+1. **Remover uma camada acusada não devolve o custo inteiro.** Tirar a thread
+   por requisição do ASGI recuperou metade dos 4160 µs, não tudo. O resto era a
+   pilha ASGI do próprio Django, que ninguém tinha separado da thread.
+2. **A vantagem do FastAPI não era o async.** 499,7 µs contra 2198 µs entre dois
+   aplicativos assíncronos, mesmo Python, mesmo SQL: **4,4x que é só tamanho de
+   framework**. Isso corrige uma leitura fácil de fazer do experimento
+   [`fastapi/01`](./performance/fastapi/01-fastapi-async.md).
+3. **Um pool maior pode encarecer o banco.** Uma conexão persistente concentra
+   cache num backend; oito espalham a escrita por oito processos nas mesmas 5
+   linhas quentes — +60% de CPU de banco por escrita. Hipótese, ainda não
+   confirmada por `pg_stat_statements` por backend.
+
+**E a inversão que sustenta a regra**: com um banco remoto de 50ms a resposta
+viraria do avesso, e o worker síncrono — uma requisição por vez — seria o pior
+arranjo de todos. **A arquitetura certa depende de onde o tempo é gasto**, e
+aqui ele é gasto em CPU.
+
+**Ganho que o async entregou de verdade, e não é vazão**: sem thread por
+requisição, não existe mais "uma conexão de Postgres por requisição concorrente".
+O `FATAL: sorry, too many clients` do experimento 06 fica impossível por
+construção. Segurança operacional, não velocidade.
 
 ---
 
@@ -609,6 +651,15 @@ aparece em relatório técnico.
   1,73x ao trocar para FastAPI+asyncpg (dentro do previsto), e a leitura ganhou
   **4,00x**, muito acima da faixa prevista. A diferença entre os dois números é
   o tamanho do ORM no endpoint que eu não olhei.
+
+- **"Tirar a thread por requisição do ASGI recupera quase todo o excedente do
+  experimento 06."** Previsto 1000–1500 µs por escrita; medido **2198 µs**.
+  Recuperou metade dos 4160 µs, não dois terços: eu tratei a thread por
+  requisição como se fosse todo o custo do caminho ASGI, e a pilha do
+  `django/core/handlers/asgi.py` continua lá depois que ela sai. Na mesma
+  previsão eu disse que o async perderia do worker síncrono por 1,2x–1,7x —
+  perdeu por **2,51x** na escrita; a faixa só valeu para a leitura (1,48x).
+  Medido em `performance/django/08`.
 
 - **"A BEAM sobe um scheduler por núcleo VISÍVEL, e `SCHEDULERS=auto` seria
   armadilha sob cota."** Falso no OTP 27: ele lê a cota do cgroup e sobe 1

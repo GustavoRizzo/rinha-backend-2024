@@ -42,7 +42,7 @@ pior caso de contenção, igual a todos os experimentos desta série.
 
 ## 2. Hipótese registrada ANTES de medir
 
-Commitada em `3ad1c5f`, antes de existir uma linha de `views_async.py`:
+Commitada em `c938e2e`, antes de existir uma linha de `views_async.py`:
 
 > 1. **Bate o `uvicorn` do 06 com folga.** Chute: **1000–1500 µs/req** na
 >    escrita, contra 4295 — algo como 3x.
