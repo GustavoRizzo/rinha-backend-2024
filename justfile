@@ -444,6 +444,31 @@ bench-06:
     done
     just bench-tabela
 
+# uma série do Django com views async de ponta a ponta (experimento 08)
+[group('bench')]
+bench-async endpoint="transacoes" cpus="0.40" duracao="10s" reps="5":
+    @BENCH_ASYNC=1 BENCH_SERVER=uvicorn BENCH_ENDPOINT={{endpoint}} \
+        bash {{RAIZ}}/scripts/bench-stack.sh postgres {{cpus}} 1 {{duracao}} {{reps}}
+
+# reproduz o experimento 08: async de ponta a ponta contra sync e contra o ASGI do 06
+[group('bench')]
+bench-08:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for e in transacoes extrato; do
+        # O braço em teste.
+        BENCH_ASYNC=1 BENCH_SERVER=uvicorn BENCH_ENDPOINT=$e \
+            bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+        # Os dois controles, remedidos no MESMO commit e na mesma máquina: os
+        # números do experimento 06 são de outro dia e não servem de linha de
+        # base para uma diferença que pode ser de 20%.
+        BENCH_SERVER=gunicorn-sync BENCH_ENDPOINT=$e \
+            bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+        BENCH_POOL=1 BENCH_SERVER=uvicorn BENCH_ENDPOINT=$e \
+            bash {{RAIZ}}/scripts/bench-stack.sh postgres 0.40 1 10s 5
+    done
+    just bench-tabela
+
 # uma série do FastAPI atrás do nginx (variantes por variável de ambiente)
 [group('bench')]
 bench-fa endpoint="transacoes" cpus="0.40" duracao="10s" reps="5":

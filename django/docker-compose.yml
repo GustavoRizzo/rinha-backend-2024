@@ -62,6 +62,10 @@ services:
       # comportamento com que todas as séries anteriores foram medidas.
       - DB_PREPARED=${DB_PREPARED:-0}
       - DB_HEALTH_CHECKS=${DB_HEALTH_CHECKS:-1}
+      # Experimento 08: views `async def` + pool assíncrono do psycopg. Exige
+      # API_SERVER=uvicorn; o entrypoint aborta na combinação errada.
+      - VIEWS_ASYNC=${VIEWS_ASYNC:-0}
+      - DB_POOL_MAX=${DB_POOL_MAX:-8}
       - GUNICORN_BIND=unix:/sockets/api01.sock
     volumes:
       - sockets:/sockets
@@ -87,6 +91,10 @@ services:
       # comportamento com que todas as séries anteriores foram medidas.
       - DB_PREPARED=${DB_PREPARED:-0}
       - DB_HEALTH_CHECKS=${DB_HEALTH_CHECKS:-1}
+      # Experimento 08: views `async def` + pool assíncrono do psycopg. Exige
+      # API_SERVER=uvicorn; o entrypoint aborta na combinação errada.
+      - VIEWS_ASYNC=${VIEWS_ASYNC:-0}
+      - DB_POOL_MAX=${DB_POOL_MAX:-8}
       - GUNICORN_BIND=unix:/sockets/api02.sock
 
   nginx:

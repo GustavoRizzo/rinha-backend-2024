@@ -23,6 +23,16 @@ fi
 # Falhar aqui é muito melhor que descobrir a divergência no relatório da carga.
 python manage.py verificar_clientes
 
+# VIEWS_ASYNC só faz sentido sob ASGI: em WSGI o Django envolveria as views
+# `async def` em `async_to_sync` e a medição diria o contrário do que pretende.
+# Abortar aqui, e não deixar rodar, porque essa combinação produz um número
+# plausível em vez de um erro — o modo de falha que já custou três bugs a este
+# projeto.
+if [ "${VIEWS_ASYNC:-0}" = "1" ] && [ "${WEB_SERVER:-gunicorn-sync}" != "uvicorn" ]; then
+    echo "ABORTADO: VIEWS_ASYNC=1 exige WEB_SERVER=uvicorn (recebido: ${WEB_SERVER:-gunicorn-sync})" >&2
+    exit 1
+fi
+
 # Servidor escolhido por ambiente, para o comparativo do experimento 06.
 # GUNICORN_BIND aceita `unix:/sockets/api01.sock` no lugar de host:porta.
 #
@@ -53,9 +63,11 @@ case "${WEB_SERVER:-gunicorn-sync}" in
             --error-logfile - --log-level warning
         ;;
     uvicorn)
-        # ASGI. As views deste projeto são SÍNCRONAS, então o Django as executa
-        # num pool de threads — o async aqui é do servidor HTTP, não da
-        # aplicação. É exatamente essa a hipótese em teste.
+        # ASGI. Com VIEWS_ASYNC=0 (padrão) as views são SÍNCRONAS e o Django as
+        # executa num pool de threads — o async é do servidor HTTP, não da
+        # aplicação; foi essa a hipótese do experimento 06. Com VIEWS_ASYNC=1 as
+        # views são `async def` e falam com o banco pelo pool assíncrono do
+        # psycopg: experimento 08.
         caminho_socket=${GUNICORN_BIND#unix:}
         exec uvicorn kernel.asgi:application \
             --uds "$caminho_socket" \

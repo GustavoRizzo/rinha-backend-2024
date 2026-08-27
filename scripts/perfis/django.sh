@@ -38,6 +38,7 @@ perfil_rig() {
         *) return 1 ;;
     esac
     export DB_POOL="${BENCH_POOL:-0}"
+    export VIEWS_ASYNC="${BENCH_ASYNC:-0}"
 }
 
 # Repõe o histórico entre repetições de um bench de ESCRITA.
@@ -57,5 +58,9 @@ perfil_sufixo_servidor() {
     # o nome delas invalidaria os documentos que as citam.
     [[ "${DB_PREPARED:-0}" == "1" ]] && sufixo="${sufixo}-prep"
     [[ "${DB_HEALTH_CHECKS:-1}" == "0" ]] && sufixo="${sufixo}-nohc"
+    # Experimento 08. Sem isto, a série async sobrescreveria a série do
+    # experimento 06 — as duas são `uvicorn` na mesma cota, e só o slug as
+    # distingue.
+    [[ "${VIEWS_ASYNC:-0}" == "1" ]] && sufixo="${sufixo}-async"
     printf '%s' "$sufixo"
 }

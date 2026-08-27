@@ -55,6 +55,9 @@ services:
       - DB_HEALTH_CHECKS=${DB_HEALTH_CHECKS:-1}
       - WEB_SERVER=${API_SERVER:-gunicorn-sync}
       - WEB_THREADS=${API_THREADS:-4}
+      # Experimento 08: views `async def` + pool assíncrono do psycopg.
+      - VIEWS_ASYNC=${VIEWS_ASYNC:-0}
+      - DB_POOL_MAX=${DB_POOL_MAX:-8}
     volumes:
       - sockets:/sockets
     deploy:
