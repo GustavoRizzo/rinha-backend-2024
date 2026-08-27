@@ -120,6 +120,7 @@ Cada escolha tem um número que a sustenta:
 | Socket Unix entre nginx e APIs | 2,9x; amplitude de 246% para 3,9% | [03](./.claude/docs/performance/django/03-nginx-e-socket-unix.md) |
 | Worker `sync` em vez de `gthread` | 2,4x | [06](./.claude/docs/performance/django/06-tipos-de-worker.md) |
 | Worker `sync` em vez de ASGI/uvicorn | 4,7x | [06](./.claude/docs/performance/django/06-tipos-de-worker.md) |
+| Worker `sync` em vez de Django `async` de ponta a ponta | 2,5x na escrita, 1,5x na leitura | [08](./.claude/docs/performance/django/08-django-async.md) |
 | Cota de CPU nas APIs, não no banco | p98 de 217ms para 7ms | [05](./.claude/docs/performance/django/05-stack-completa-gatling.md) |
 | 1 worker por API em vez de 4 | 28% sob cota | [04](./.claude/docs/performance/django/04-postgres.md) |
 | `DEBUG=False` | 4,1% | [01](./.claude/docs/performance/django/01-debug-vs-producao.md) |
@@ -160,6 +161,7 @@ números, o commit exato medido e os comandos para replicar.
 | [go/01](./.claude/docs/performance/go/01-a-aplicacao-sai-da-frente.md) | A aplicação sai da frente | Primeira stack do laboratório em que **o Postgres vira a parede**: API a 0,9% de saturação, banco a 92,7% |
 | [go/02](./.claude/docs/performance/go/02-tirando-proveito-da-stack.md) | As variantes do Go, medidas | A bancada elege `GOMAXPROCS=1` (20% menos CPU) e **a prova oficial recusa** — folga é amortecedor de cauda |
 | [go/03](./.claude/docs/performance/go/03-quatro-stacks-quatro-linguagens.md) | As quatro sob a cota da Rinha | Comparativo completo **+ linhas de código**: a correlação "mais ajuda, menos desempenho" só vale nas pontas |
+| [django/08](./.claude/docs/performance/django/08-django-async.md) | Django `async` de ponta a ponta | Async **não compra vazão sem espera para sobrepor**: 2,51x pior que o worker síncrono — e a vantagem do FastAPI não era o async, era o tamanho do framework |
 | [go/04](./.claude/docs/performance/go/04-sem-cota.md) | As quatro sem limitação | Go na frente nos quatro cenários; e **paralelismo não resolve serialização** — três das quatro pioram na escrita com a máquina inteira |
 | [go/05](./.claude/docs/performance/go/05-bloco-b-estrategias-de-concorrencia.md) | **Bloco B**: estratégias de concorrência | `UPDATE ... RETURNING` vence — por **9% a 15%**, não "por larga margem". Contra a otimista, 3,57x |
 | [fastapi/03](./.claude/docs/performance/fastapi/03-o-que-a-troca-de-framework-comprou.md) | Fechamento | O ganho que dá para atribuir ao framework é **1,73x**, não 4x: o resto era **ORM no caminho quente**, e isso o Django também poderia ter tirado |
